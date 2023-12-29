@@ -5,7 +5,7 @@
             /\___/\
             )     (
            =\     /=                  if this code is not work, i dont know who wrote this code
-             )   (                    Copyright В© 2023  @vlad-km
+             )   (                                                               2023,  @vlad-km
             /     \                   
             )     (                   
            /       \                  Electron >= electron@21.2.2
@@ -17,6 +17,19 @@
               \)
 |#
 
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
+;;;
+;;; **********************************************************************
+;;;
+;;; Functions to implement FORMAT and FORMATTER for CMU Common Lisp.
+;;;
+;;; Written by William Lott, with lots of stuff stolen from the previous
+;;; version by David Adam and later rewritten by Bill Maddox.
+;;;
 
 (defparameter +digits+ "0123456789")
 (defconstant +format-directive-limit+ (1+ (char-code #\~)))
@@ -88,7 +101,6 @@
                  (push (cons posn nil) params))
                 ((char= char #\:)
                  (if colonp
-                     ;; todo: condition
                      (error 'format-error
                             :complaint "Too many colons supplied."
                             :control-string string
@@ -96,7 +108,6 @@
                      (setf colonp t)))
                 ((char= char #\@)
                  (if atsignp
-                     ;; todo: condition
                      (error 'format-error
                             :complaint "Too many at-signs supplied."
                             :control-string string
@@ -109,7 +120,6 @@
           (let ((closing-slash (position #\/ string :start (1+ posn))))
             (if closing-slash
                 (setf posn closing-slash)
-                ;; todo: condition
                 (error 'format-error
                        :complaint "No matching closing slash."
                        :control-string string
@@ -144,6 +154,26 @@
         fn)
   char)
 
+(defun find-directive (directives kind stop-at-semi)
+  (if directives
+      (let ((next (car directives)))
+        (if (format-directive-p next)
+            (let ((char (format-directive-character next)))
+              (if (or (char= kind char)(and stop-at-semi (char= char #\;)))
+                  (car directives)
+                  (find-directive
+                   (cdr (flet ((after (char)
+                                 (member (find-directive (cdr directives) char nil)
+                                         directives)))
+                          (case char
+                            (#\( (after #\)))
+                            (#\< (after #\>))
+                            (#\[ (after #\]))
+                            (#\{ (after #\}))
+                            (t directives))))
+                   kind stop-at-semi)))
+            (find-directive (cdr directives) kind stop-at-semi)))))
+
 (defmacro once-only (specs &body body)
   (labels ((frob (specs body)
              (if (null specs)
@@ -169,7 +199,6 @@
           (collect-bindings `(,var (let* ((param-and-offset (pop ,params))
                                   (offset (car param-and-offset))
                                   (param (cdr param-and-offset)))
-                             ;;(fmt-log "MEISTER param-and-offset: " param-and-offset)
                              (case param
                                (:arg (or (next-arg offset) ,default))
                                (:remaining (length args))
@@ -501,6 +530,26 @@
 	       (setf args (%format stream (next-arg) orig-args args))
 	       (%format stream (next-arg) (next-arg))))))
 
+;;; Coditionals
+
+(defun parse-conditional-directive (directives)
+  (let ((sublists nil)
+        (last-semi-with-colon-p nil)
+        (remaining directives))
+    (loop
+      (let ((close-or-semi (find-directive remaining #\] t)))
+        (unless close-or-semi
+          (error 'format-error
+                 :complaint "No corresponding close bracket."))
+        (let ((posn (position close-or-semi remaining)))
+          (push (subseq remaining 0 posn) sublists)
+          (setf remaining (nthcdr (1+ posn) remaining))
+          (when (char= (format-directive-character close-or-semi) #\])
+            (return))
+          (setf last-semi-with-colon-p
+                (format-directive-colonp close-or-semi)))))
+    (values sublists last-semi-with-colon-p remaining)))
+
 
 (def-complex-format-interpreter #\[
     (colonp atsignp params directives)
@@ -538,6 +587,18 @@
                      (interpret-directive-list stream sublist orig-args args))))))
     remaining))
 
+
+(def-complex-format-interpreter #\;
+    ()
+  (error "~~; not contained within either ~~[...~~] or ~~<...~~>."))
+
+(def-complex-format-interpreter #\]
+    ()
+  (error "No corresponding open bracket `]`."))
+
+
+(defvar *outside-args*)
+
 (def-format-interpreter #\^
     (colonp atsignp params)
   (when atsignp
@@ -571,6 +632,8 @@
     (throw (if colonp 'up-up-and-out 'up-and-out)
 	    args)))
 
+
+;;;
 
 (def-complex-format-interpreter #\{
 		(colonp atsignp params string end directives)
@@ -625,6 +688,12 @@
                    (*logical-block-popper* nil))
                (do-loop arg arg)))
          (nthcdr (1+ posn) directives))))))
+
+(def-complex-format-interpreter #\}
+    ()
+  (error  "No corresponding open brace `}`."))
+
+
 
 (defun das!format (destination control-string &rest format-arguments)
   "Provides various facilities for formatting output.
@@ -698,109 +767,6 @@
                    (values new-directives new-args)))
              (interpret-directive-list stream new-directives orig-args new-args)))))
       args))
-
-
-
-
-(defun modifier-char-p (c)
-  (or (char= c #\:) (char= c #\@)))
-
-
-(defun format-special (chr arg parameters modifiers stream)
-  (case (char-upcase chr)
-    (#\S (prin1 arg stream))
-    (#\A (princ arg stream))
-    (#\D (princ arg stream))
-    (#\C (cond ((member #\: modifiers)
-                (write-char-aux arg stream))
-               (t
-                (write-char arg stream))))
-    (t
-     (warn "~S is not implemented yet, using ~~S instead" chr)
-     (prin1 arg stream))))
-
-
-(defun get-format-parameter (fmt i args)
-  (let ((c (char fmt i)))
-    (values (cond ((char= c #\')
-                   (prog1 (char fmt (incf i))
-                     (incf i)))
-                  ((char= c #\v)
-                   (prog1 (pop args)
-                     (incf i)))
-                  ((char= c #\#)
-                   (prog1 (length args)
-                     (incf i)))
-                  ((digit-char-p c)
-                   (let ((chars nil))
-                     (while (char<= #\0 (char fmt i) #\9)
-                       (push (char fmt i) chars)
-                       (incf i))
-                     (parse-integer (map 'string 'identity (nreverse chars))))))
-            i
-            args)))
-
-
-(defun parse-format-directive (fmt i args)
-  (let ((parms nil)
-        (modifiers '())
-        parm)
-    (block nil
-      (loop
-        (multiple-value-setq (parm i args) (get-format-parameter fmt i args))
-        (if parm
-            (push parm parms)
-            (let ((c (char fmt i)))
-              (cond ((char= c #\,)
-                     (incf i))
-                    ((modifier-char-p c)
-                     (push c modifiers)
-                     (when (modifier-char-p (char fmt (incf i)))
-                       (push (char fmt i) modifiers)
-                       (incf i))
-                     (return))
-                    (t
-                     (return)))))))
-    (values (nreverse parms) modifiers i args)))
-
-
-(defun %cl-format (destination fmt &rest args)
-  (let* ((len (length fmt))
-         (i 0)
-         (end (1- len))
-         (arguments args))
-    (let ((res
-            (with-output-to-string (stream)
-              (while (< i len)
-                     (let ((c (char fmt i)))
-                       (if (char= c #\~)
-                           (progn
-                             (if (= i end) (error "Premature end of control string ~s" fmt))
-                             (multiple-value-bind (parms modifiers pos next-arguments)
-                                 (parse-format-directive fmt (incf i) arguments)
-                               (setq i pos
-                                     arguments next-arguments)
-                               (let ((next (char fmt i)))
-                                 (cond ((char= next #\~)
-                                        (write-char #\~ stream))
-                                       ((or (char= next #\&)
-                                            (char= next #\%))
-                                        (write-char #\newline stream))
-                                       ((char= next #\*)
-                                        (pop arguments))
-                                       (t (format-special next (car arguments) parms modifiers stream)
-                                          (pop arguments))))))
-                           (write-char c stream))
-                       (incf i))))))
-      (case destination
-        ((t)
-         (write-string res)
-         nil)
-        ((nil)
-         res)
-        (t
-         (write-string res destination))))))
-
 
 
 ;;; EOF
