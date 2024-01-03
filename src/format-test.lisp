@@ -744,7 +744,6 @@
            (assert-eql  "1 try/0 wins" "~D tr~:@P/~D win~:P" 1 0)
            (assert-eql  "1 try/3 wins" "~D tr~:@P/~D win~:P" 1 3))
 
-
 ;;; Errors
 (test-case Errors
            (assert-err  "~::d" 0)
@@ -769,6 +768,117 @@
            (assert-err "~@~")
            (assert-err "~")
            (assert-err "~~~"))
+
+(test-case write
+  ;; Test that objects are renendered as with write.
+  (loop for obj in '(234 -10 1.5 'abc "hello" #\x #\Space nil)
+        do  (assert-eql (with-output-to-string (stream)
+                            (write obj :stream stream))
+                          "~s" obj))
+  ;; test that it can handle circular lists
+  (let ((*print-circle* t))
+     (assert-eql "#1=(1 . #1#)"
+                    "~w"
+                           (let ((l (list 1)))
+                             (setf (cdr l) l))))
+  ;; test that this directive reports an error
+  ;; if a parameter is given
+  (assert-err "~1w" 234)
+  (assert-err "~'aw" 234))
+
+
+(test-case go-to
+   (assert-eql "ac"  "~c~*~c" #\a #\b #\c #\d)
+   (assert-eql "ab"  "~c~0*~c" #\a #\b #\c #\d)
+   (assert-eql "ac"  "~c~1*~c" #\a #\b #\c #\d)
+   (assert-eql "ad"  "~c~2*~c" #\a #\b #\c #\d)
+   (assert-eql "aa"  "~c~:*~c" #\a #\b #\c #\d)
+   (assert-eql "ab"  "~c~0:*~c" #\a #\b #\c #\d)
+   (assert-eql "aa"  "~c~1:*~c" #\a #\b #\c #\d)
+   (assert-eql "aba"  "~c~c~2:*~c" #\a #\b #\c #\d)
+   (assert-eql "aba"  "~c~c~@*~c" #\a #\b #\c #\d)
+   (assert-eql "abb"  "~c~c~1@*~c" #\a #\b #\c #\d)
+   (assert-eql "abd"  "~c~c~3@*~c" #\a #\b #\c #\d)
+  ;; Test that going beyond the first or last argument
+  ;; gives an error.
+  (assert-err "~c~c~*" #\a #\b)
+  (assert-err "~c~c~2*~:2*~c" #\a #\b #\c)
+  (assert-err "~c~:2*~2*~c" #\a #\b #\c)
+  (assert-err "~c~-1@*~0@*~c" #\a #\b #\c)
+  (assert-err "~c~4@*~0@*~c" #\a #\b #\c))
+
+(test-case
+ conditional
+ (assert-eql "abc"   "~[xyz~;abc~;def~]" 1)
+ (assert-eql "xyz"   "~[xyz~;abc~;def~]" 0)
+ (assert-eql ""      "~[xyz~;abc~;def~]" 3)
+ ;; test the default clause
+ (assert-eql "abc"   "~[xyz~;abc~:;def~]" 1)
+ (assert-eql "xyz"   "~[xyz~;abc~:;def~]" 0)
+ (assert-eql "def"   "~[xyz~;abc~:;def~]" 3)
+ (assert-eql "abc"   "~:[xyz~;abc~]" nil)
+ (assert-eql "xyz"   "~:[xyz~;abc~]" 24)
+ (assert-eql "xyz23" "~@[xyz~]~d" 23)
+ (assert-eql "23"    "~@[xyz~]~d" nil 23)
+ ;; test the use of the parameter instead of the argument
+ (assert-eql "abc"   "~#[xyz~;abc~;def~]" 10)
+ (assert-eql "xyz"   "~#[xyz~;abc~;def~]")
+ (assert-eql ""      "~#[xyz~;abc~;def~]" 10 10 10)
+ (assert-eql "abc"   "~v[xyz~;abc~;def~]" 1)
+ (assert-eql "xyz"   "~v[xyz~;abc~;def~]" 0)
+ (assert-eql ""      "~v[xyz~;abc~;def~]" 3)
+ (assert-eql "abc"   "~1[xyz~;abc~;def~]" 10)
+ (assert-eql "xyz"   "~0[xyz~;abc~;def~]" 10)
+ (assert-eql ""      "~3[xyz~;abc~;def~]" 10)
+ ;; test that giving the : modifier fails if there
+ ;; are not exactly two clauses
+ (assert-err         "~:[xyz~;abc~;def~]" nil)
+ (assert-err         "~:[xyz~]" nil)
+ ;; test that giving the @ modifier fails if there
+ ;; is not exactly one clause
+ (assert-err         "~@[xyz~;abc~]~d" nil 23)
+ ;; test that giving no clauses fails
+ (assert-err         "~[~]" nil 23)
+ ;; test that giving both modifiers gives an error.
+ (assert-err         "~:@[xyz~;abc~;def~]" 1 2 3)
+ ;; test that giving the : modifier to a clause separator
+ ;; other than the last gives an error
+ (assert-err         "~[xyz~:;abc~:;def~]" 3)
+ ;; test that giving the modifiers to ~] gives an error
+ ;; test that giving parameters to ~; or ~] gives an error
+ (assert-err         "~[xyz~;abc~;def~2]" 3)
+ (assert-err         "~[xyz~;abc~2;def~]" 3)
+ (assert-err         "~[xyz~;abc~;def~#]" 3)
+ (assert-err         "~[xyz~;abc~#;def~]" 3)
+ (assert-err         "~[xyz~;abc~;def~v]" 3)
+ (assert-err         "~[xyz~;abc~v;def~]" 3))
+
+(test-case
+ iteration
+ (assert-eql "ABCDE"  "~{~a~a~}~a" '(a b c d) 'e)
+ ;; test that, with a parameter, at most that many
+ ;; iterations are done.
+ (assert-eql "ABE"    "~1{~a~a~}~a" '(a b c d) 'e)
+ (assert-eql "E"      "~0{~a~a~}~a" '(a b c d) 'e)
+ ;; test that the `:' modifier is taken into account
+ (assert-eql "ABCDE"  "~:{~a~a~}~a" '((a b 1) (c d 2)) 'e)
+ (assert-eql "ABE"    "~1:{~a~a~}~a" '((a b 1) (c d 2)) 'e)
+ (assert-eql "E"      "~0:{~a~a~}~a" '((a b 1) (c d 2)) 'e)
+ ;; test that the `@' modifier is taken into account
+ (assert-eql "ABCD"   "~@{~a~a~}" 'a 'b 'c 'd)
+ (assert-eql "ABC"    "~1@{~a~a~}~a" 'a 'b 'c 'd 'e)
+ (assert-eql "A"      "~0@{~a~a~}~a" 'a 'b 'c 'd 'e)
+ ;; test that using both modifiers is taken into account
+ (assert-eql "ABCD"   "~:@{~a~a~}" '(a b) '(c d))
+ (assert-eql "ABE"    "~1:@{~a~a~}~a" '(a b) 'e)
+ (assert-eql "E"      "~0:@{~a~a~}~a" 'e))
+
+
+(test-case
+ directive.&
+ (loop for i from 1 to 100
+       for s1 = (make-string (1- i) :initial-element #\Newline)
+       do (assert-eql s1 "~V&" i)))
 
 
 ;;; eof
