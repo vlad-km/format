@@ -41,6 +41,86 @@
 (defparameter *default-format-error-offset* nil)
 
 
+;;;; Specials used to communicate information.
+
+;;; *UP-UP-AND-OUT-ALLOWED* -- internal.
+;;; Used both by the expansion stuff and the interpreter stuff.  When it is
+;;; non-NIL, up-up-and-out (~:^) is allowed.  Otherwise, ~:^ isn't allowed.
+(defvar *up-up-and-out-allowed* nil)
+
+;;; *LOGICAL-BLOCK-POPPER* -- internal.
+;;; Used by the interpreter stuff.  When it non-NIL, its a function that will
+;;; invoke PPRINT-POP in the right lexical environemnt.
+(defvar *logical-block-popper* nil)
+
+;;; *EXPANDER-NEXT-ARG-MACRO* -- internal.
+;;; Used by the expander stuff.  This is bindable so that ~<...~:>
+;;; can change it.
+(defvar *expander-next-arg-macro* 'expander-next-arg)
+
+;;; *ONLY-SIMPLE-ARGS* -- internal.
+;;; Used by the expander stuff.  Initially starts as T, and gets set to NIL
+;;; if someone needs to do something strange with the arg list (like use
+;;; the rest, or something).
+(defvar *only-simple-args*)
+
+;;; *ORIG-ARGS-AVAILABLE* -- internal.
+;;; Used by the expander stuff.  We do an initial pass with this as NIL.
+;;; If someone doesn't like this, they (throw 'need-orig-args nil) and we try
+;;; again with it bound to T.  If this is T, we don't try to do anything
+;;; fancy with args.
+(defvar *orig-args-available* nil)
+
+;;; *SIMPLE-ARGS* -- internal.
+;;; Used by the expander stuff.  List of (symbol . offset) for simple args.
+(defvar *simple-args*)
+
+
+#+nil
+(defun %print-format-error (condition stream)
+  (describe condition)
+  (describe stream)
+  (das!format stream
+	           "~:[~;Error in format: ~]~
+	      ~?~@[~%  ~A~%  ~Vt@^~]"
+	           (format-error-print-banner condition)
+	           (format-error-complaint condition)
+	           (format-error-arguments condition)
+	           (format-error-control-string condition)
+	           (format-error-offset condition)))
+
+(defun %print-format-error (condition stream)
+  (das!format stream
+	           "~&Error in format:~& ~a ~&args: ~a~&ctrl: ~a~&"
+	           (format-error-complaint condition)
+	           (format-error-arguments condition)
+	           (format-error-control-string condition)))
+
+
+;;; stub for SVREF
+(jscl::fset 'svref (fdefinition 'aref))
+
+
+(defvar *default-format-error-control-string* nil)
+(defvar *default-format-error-offset* nil)
+
+(define-condition format-error (error)
+  ((complaint :reader format-error-complaint
+              :initarg :complaint)
+   (arguments :reader format-error-arguments
+              :initarg :arguments
+              :initform nil)
+   (control-string :reader format-error-control-string
+		               :initarg :control-string
+		               :initform *default-format-error-control-string*) 
+   (offset :reader format-error-offset
+           :initarg :offset
+	         :initform *default-format-error-offset*)
+   (print-banner :reader format-error-print-banner
+                 :initarg :print-banner
+		             :initform t))
+  (:report (lambda (condition stream)(%print-format-error condition stream))))
+
 (defstruct (format-directive :named (:type vector))
   (string t :type string)
   (start  0 :type integer)
@@ -50,14 +130,11 @@
   (atsignp nil :type (member t nil))
   (params nil :type list))
 
-
-
 (defun parse-directive (string start)
   (let ((posn (1+ start)) (params nil) (colonp nil) (atsignp nil)
         (end (length string)))
     (flet ((get-char ()
              (if (= posn end)
-                 ;; todo: condition
                  (error 'format-error
                         :complaint "String ended before directive was found."
                         :control-string string
@@ -340,6 +417,19 @@
         (t
          (prin1 (next-arg) stream))))
 
+
+(defun format-print-named-character (char stream)
+  (let* ((name (char-name char)))
+    (cond (name
+	   (write-string name stream))
+	  ((<= 0 (char-code char) 31)
+	   ;; Print control characters as "^"<char>
+	   (write-char #\^ stream)
+	   (write-char (code-char (+ 64 (char-code char))) stream))
+	  (t
+	   (write-char char stream)))))
+
+
 (def-format-interpreter #\C
     (colonp atsignp params)
   (interpret-bind-defaults
@@ -408,6 +498,144 @@
       (if atsignp
 	  (write-string (if (eql arg 1) "y" "ies") stream)
 	  (unless (eql arg 1) (write-char #\s stream))))))
+
+;;; Print Roman numerals
+(defun format-print-old-roman (stream n)
+  (unless (< 0 n 5000)
+    (error "Number too large to print in old Roman numerals: ~:D" n))
+  (do ((char-list '(#\D #\C #\L #\X #\V #\I) (cdr char-list))
+       (val-list '(500 100 50 10 5 1) (cdr val-list))
+       (cur-char #\M (car char-list))
+       (cur-val 1000 (car val-list))
+       (start n (do ((i start (progn
+				                        (write-char cur-char stream)
+				                        (- i cur-val))))
+		                ((< i cur-val) i))))
+      ((zerop start))))
+
+(defun format-print-roman (stream n)
+  (unless (< 0 n 4000)
+    (error "Number too large to print in Roman numerals: ~:D" n))
+  (do ((char-list '(#\D #\C #\L #\X #\V #\I) (cdr char-list))
+       (val-list '(500 100 50 10 5 1) (cdr val-list))
+       (sub-chars '(#\C #\X #\X #\I #\I) (cdr sub-chars))
+       (sub-val '(100 10 10 1 1 0) (cdr sub-val))
+       (cur-char #\M (car char-list))
+       (cur-val 1000 (car val-list))
+       (cur-sub-char #\C (car sub-chars))
+       (cur-sub-val 100 (car sub-val))
+       (start n (do ((i start (progn
+				                        (write-char cur-char stream)
+				                        (- i cur-val))))
+		                ((< i cur-val)
+		                 (cond ((<= (- cur-val cur-sub-val) i)
+			                      (write-char cur-sub-char stream)
+			                      (write-char cur-char stream)
+			                      (- i (- cur-val cur-sub-val)))
+			                     (t i))))))
+	    ((zerop start))))
+;;; end roman 
+
+
+(defconstant cardinal-ones
+  #(nil "one" "two" "three" "four" "five" "six" "seven" "eight" "nine"))
+
+(defconstant cardinal-tens
+  #(nil nil "twenty" "thirty" "forty"
+	"fifty" "sixty" "seventy" "eighty" "ninety"))
+
+(defconstant cardinal-teens
+  #("ten" "eleven" "twelve" "thirteen" "fourteen"  ;;; RAD
+    "fifteen" "sixteen" "seventeen" "eighteen" "nineteen"))
+
+;; See http://en.wikipedia.org/wiki/Names_of_large_numbers and also
+;; http://home.hetnet.nl/~vanadovv/BignumbyN.html.  This list comes
+;; from the latter link.
+;;
+;; Leading spaces are required to get everything printed out
+;; correctly.
+(defconstant cardinal-periods
+  #("" " thousand" " million" " billion" " trillion" " quadrillion"
+    " quintillion" " sextillion" " septillion" " octillion" " nonillion"))
+
+(defconstant ordinal-ones
+  #(nil "first" "second" "third" "fourth"
+	"fifth" "sixth" "seventh" "eighth" "ninth")
+  "Table of ordinal ones-place digits in English")
+
+(defconstant ordinal-tens 
+  #(nil "tenth" "twentieth" "thirtieth" "fortieth"
+	"fiftieth" "sixtieth" "seventieth" "eightieth" "ninetieth")
+  "Table of ordinal tens-place digits in English")
+
+(defun format-print-small-cardinal (stream n)
+  (multiple-value-bind 
+        (hundreds rem) (truncate n 100)
+    (when (plusp hundreds)
+      (write-string (svref cardinal-ones hundreds) stream)
+      (write-string " hundred" stream)
+      (when (plusp rem)
+	      (write-char #\space stream)))
+    (when (plusp rem)
+      (multiple-value-bind (tens ones)
+			    (truncate rem 10)
+        (cond ((< 1 tens)
+	             (write-string (aref cardinal-tens tens) stream)
+	             (when (plusp ones)
+		             (write-char #\- stream)
+		             (write-string (aref cardinal-ones ones) stream)))
+	            ((= tens 1)
+	             (write-string (aref cardinal-teens ones) stream))
+	            ((plusp ones)
+	             (write-string (aref cardinal-ones ones) stream)))))))
+
+(defun format-print-cardinal (stream n)
+  (cond ((minusp n)
+	       (write-string "negative " stream)
+	       (format-print-cardinal-aux stream (- n) 0 n))
+	      ((zerop n)
+	       (write-string "zero" stream))
+	      (t
+	       (format-print-cardinal-aux stream n 0 n))))
+
+(defun format-print-cardinal-aux (stream n period err)
+  (multiple-value-bind (beyond here) (truncate n 1000)
+    (unless (< period (length cardinal-periods))
+      (error "Number too large to print in English: ~:D" err))
+    (unless (zerop beyond)
+      (format-print-cardinal-aux stream beyond (1+ period) err))
+    (unless (zerop here)
+      (unless (zerop beyond)(write-char #\space stream))
+      (format-print-small-cardinal stream here)
+      (write-string (aref cardinal-periods period) stream))))
+
+(defun format-print-ordinal (stream n)
+  (when (minusp n)(write-string "negative " stream))
+  (let ((number (abs n)))
+    (multiple-value-bind
+	        (top bot) (truncate number 100)
+      (unless (zerop top)
+	      (format-print-cardinal stream (- number bot)))
+      (when (and (plusp top) (plusp bot))
+	      (write-char #\space stream))
+      (multiple-value-bind
+	          (tens ones) (truncate bot 10)
+	      (cond ((= bot 12) (write-string "twelfth" stream))
+	            ((= tens 1)
+	             (write-string (aref cardinal-teens ones) stream) ;;;RAD
+	             (write-string "th" stream))
+	            ((and (zerop tens) (plusp ones))
+	             (write-string (aref ordinal-ones ones) stream))
+	            ((and (zerop ones)(plusp tens))
+	             (write-string (aref ordinal-tens tens) stream))
+	            ((plusp bot)
+	             (write-string (aref cardinal-tens tens) stream)
+	             (write-char #\- stream)
+	             (write-string (aref ordinal-ones ones) stream))
+	            ((plusp number)
+	             (write-string "th" stream))
+	            (t
+	             (write-string "zeroth" stream)))))))
 
 ;;; floating point
 (defun decimal-string (n)
@@ -694,6 +922,27 @@
   (error  "No corresponding open brace `}`."))
 
 
+;;; path for jscl::stream.lisp
+;;; with-output-to-string (var &optional string-form &key element-type) declaration* form*
+;;; without &key implementation
+(defmacro das!with-output-to-string ((var &optional string-form) &body body)
+  (cond (;;;(and destination (stringp destination))
+         string-form
+         #+nil(cond ((stringp string-form) t)
+               ((and (symbolp string-form) (stringp (symbol-value string-form))) t)
+               (t (error "~a: is not string." string-form)))
+         (let ((buf (gensym)))
+           `(let ((,var (make-string-output-stream))
+                  (,buf ,string-form))
+              (funcall (jscl::stream-write-fn ,var) ,buf)
+              ,@body
+              #+nil(jscl::stream-data ,var)
+              (get-output-stream-string ,var))))
+        (t
+         `(let ((,var (make-string-output-stream)))
+            ,@body
+            (get-output-stream-string ,var)))
+        ))
 
 (defun das!format (destination control-string &rest format-arguments)
   "Provides various facilities for formatting output.
@@ -724,8 +973,8 @@
     (null
      (with-output-to-string (stream)
        (%format stream control-string format-arguments)))
-    #+nil (string
-     (with-output-to-string (stream destination)
+    (string
+     (das!with-output-to-string (stream destination)
        (%format stream control-string format-arguments)))
     ((member t)
      (%format *standard-output* control-string format-arguments)
@@ -733,7 +982,6 @@
     (stream
      (%format destination control-string format-arguments)
      nil)))
-
 
 (defun %format (stream string orig-args &optional (args orig-args))
   (check-type string string)
@@ -745,9 +993,11 @@
                                     (tokenize-control-string string)
                                     orig-args
                                     args))
-      (format-error (c)
-        (describe c))
-      (error (c) (describe c)))))
+      (error (c)
+        (typecase c
+          (format-error (%print-format-error c *standard-output*))
+          (error (jscl::display-condition c))
+          (t (describe c)))))))
 
 (defun interpret-directive-list (stream directives orig-args args)
   (if directives
@@ -761,7 +1011,8 @@
                (let ((function (aref *format-directive-interpreters*
                                      (char-code (format-directive-character directive))))
                      (*default-format-error-offset* (1- (format-directive-end directive))))
-                 (unless function (error 'format-error :complaint "Unknown format directive."))
+                 (unless function (error 'format-error :complaint "Unknown format directive."
+                                                       :control-string (list (format-directive-string directive))))
                  (multiple-value-bind (new-directives new-args)
                      (funcall function stream directive (cdr directives) orig-args args)
                    (values new-directives new-args)))
