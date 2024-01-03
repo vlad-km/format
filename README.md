@@ -18,7 +18,7 @@ development
 
 ```lisp
 ;;; compile 'format', save "format.js"
-(load "./repo/format/src/format.lisp" :hook (let ((x #()) x) :output "./format.js") ;; compile 'format', save "format.js"
+(load "./repo/format/src/format.lisp" :hook (let ((x #()) x) :output "./format.js")
 ;;; compile 'format-test.file', run test-cases
 (load "./repo/format/src/format-test.lisp")
 ```
