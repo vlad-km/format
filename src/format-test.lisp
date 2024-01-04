@@ -168,7 +168,7 @@
                        "~2~"))
 
 ;;;; Directve P
-(test-case directive-p
+(time (test-case directive-p
            (assert-eql  ""  "~p" 1)
            (Assert-eql "s"  "~P" 2)
            (assert-eql "s"  "~p" 0)
@@ -186,12 +186,12 @@
            (assert-eql "y"       "~@p" 1) 
            (assert-eql "ies"     "~@P" 2)
            (assert-eql "ies"     "~@p" 0)
-           (assert-eql "ies"     "~@P" 1.0))
+           (assert-eql "ies"     "~@P" 1.0)))
 
 
 
 ;;; Directive R
-(test-case Radix-English-cardinal-numbers
+(time (test-case Radix-English-cardinal-numbers
            (assert-eql "zero"  "~r" 0)
            (assert-eql "one"   "~r" 1)
            (assert-eql "two"   "~r" 2)
@@ -233,10 +233,10 @@
            (assert-eql "five hundred thousand"     "~r" 500000)
            (assert-eql "two million"               "~r" 2000000)
            (assert-eql "three million six"         "~r" 3000006)
-           (assert-eql "four million two thousand" "~r" 4002000))
+           (assert-eql "four million two thousand" "~r" 4002000)))
 
 ;;;
-(test-case Radix-English-Numbers
+(time (test-case Radix-English-Numbers
            (assert-eql "zeroth"   "~:r" 0)
            (assert-eql "first"    "~:r" 1)
            (assert-eql "second"   "~:r" 2)
@@ -278,10 +278,10 @@
            (assert-eql "five hundred thousandth"     "~:r" 500000)
            (assert-eql "two millionth"               "~:r" 2000000)
            (assert-eql "three million sixth"         "~:r" 3000006)
-           (assert-eql "four million two thousandth" "~:r" 4002000))
+           (assert-eql "four million two thousandth" "~:r" 4002000)))
 
 ;;;
-(test-case Radix-Roman-numbers
+(time (test-case Radix-Roman-numbers
            (assert-eql "I"       "~@r" 1)
            (assert-eql "II"      "~@r" 2)
            (assert-eql "III"     "~@r" 3)
@@ -313,10 +313,10 @@
            (assert-eql "DCCCXXXI" "~@r" 831)
            (assert-eql "M"        "~@r" 1000)
            (assert-eql "MMXL"     "~@r" 2040)
-           (assert-eql "MMMXC"    "~@r" 3090))
+           (assert-eql "MMMXC"    "~@r" 3090)))
 
 ;;;
-(test-case Radix-Roman-numerals
+(time (test-case Radix-Roman-numerals
            (assert-eql "I"            "~:@r" 1)
            (assert-eql "II"           "~:@r" 2)
            (assert-eql "III"          "~:@r" 3)
@@ -348,7 +348,7 @@
            (assert-eql "DCCCXXXI"      "~:@r" 831)
            (assert-eql "M"             "~:@r" 1000)
            (assert-eql "MMXXXX"        "~:@r" 2040)
-           (assert-eql "MMMLXXXX"      "~:@r" 3090))
+           (assert-eql "MMMLXXXX"      "~:@r" 3090)))
 
 ;;;  
 (test-case Radix-numbers-mincol
@@ -380,7 +380,7 @@
 
 
 ;;; Directive D
-(test-case decimal
+(time (test-case decimal
            (assert-eql "123"              "~1d" 123)
            (assert-eql "123"              "~2d" 123)
            (assert-eql "123"              "~3d" 123)
@@ -391,7 +391,7 @@
            (assert-eql "xx1,234"          "~7,'x:d" 1234)
            (assert-eql "xx551,234"        "~9,'x:d" 551234)
            (assert-eql "xx66,551,234"     "~12,'x:d" 66551234)
-           (assert-eql "xx66a551a234"     "~12,'x,'a:d" 66551234))
+           (assert-eql "xx66a551a234"     "~12,'x,'a:d" 66551234)))
 ;;;
 (test-case decimal-1
            (flatten)
@@ -503,7 +503,7 @@
 
 
 ;;; X Directive
-(test-case x-directive-integrated-text
+(time (test-case x-directive-integrated-text
            (flatten)
            (assert-eql   "1B3FE"           "~#X" #x1b3fe (make-list 0))
            (assert-eql   "1B3FE"           "~#X" #x1b3fe (make-list 1))
@@ -547,7 +547,7 @@
            (assert-eql   "      1234"   "~10x"   #x1234)
            (assert-eql   "     +1234"   "~10@X"  #x1234)
            (assert-eql   "1234"         "~1X"    #x1234)
-           (assert-eql   "1234"         "~1x"    #x1234))
+           (assert-eql   "1234"         "~1x"    #x1234)))
 
 ;;; Directive A
 (test-case aesthetic-eql-princ
@@ -624,7 +624,7 @@
            (assert-eql "12345   "                               "~,,3s" 12345)
            (assert-eql "12345xxx"                               "~0,1,3,'xs" 12345))
 
-(test-case standard-1
+(time (test-case standard-1
            (assert-eql "()"             "~1@:S" nil)
            (assert-eql "()"             "~2@:S" nil)
            (assert-eql " ()"            "~3@:S" nil)
@@ -634,9 +634,9 @@
            (assert-eql "     ()"        "~7@:S" nil)
            (assert-eql "      ()"       "~8@:S" nil)
            (assert-eql "       ()"      "~9@:S" nil)
-           (assert-eql "        ()"     "~10@:S" nil))
+           (assert-eql "        ()"     "~10@:S" nil)))
 
-(test-case standard-2
+(time (test-case standard-2
            (assert-eql "()"             "~1:S" nil)
            (assert-eql "()"             "~2:S" nil)
            (assert-eql "() "            "~3:S" nil)
@@ -646,9 +646,9 @@
            (assert-eql "()     "        "~7:S" nil)
            (assert-eql "()      "       "~8:S" nil)
            (assert-eql "()       "      "~9:S" nil)
-           (assert-eql "()        "     "~10:S" nil))
+           (assert-eql "()        "     "~10:S" nil)))
 
-(test-case standard-3
+(time (test-case standard-3
            (assert-eql "()"             "~v:s" 1 nil)
            (assert-eql "()"             "~v:s" 2 nil)
            (assert-eql "() "            "~v:s" 3 nil)
@@ -658,9 +658,9 @@
            (assert-eql "()     "        "~v:s" 7 nil)
            (assert-eql "()      "       "~v:s" 8 nil)
            (assert-eql "()       "      "~v:s" 9 nil)
-           (assert-eql "()        "     "~v:s" 10 nil))
+           (assert-eql "()        "     "~v:s" 10 nil)))
 
-(test-case standard-4
+(time (test-case standard-4
            (assert-eql "()"             "~v:@s" 1 nil)
            (assert-eql "()"             "~v:@s" 2 nil)
            (assert-eql " ()"            "~v:@s" 3 nil)
@@ -670,7 +670,7 @@
            (assert-eql "     ()"        "~v:@s" 7 nil)
            (assert-eql "      ()"       "~v:@s" 8 nil)
            (assert-eql "       ()"      "~v:@s" 9 nil)
-           (assert-eql "        ()"     "~v:@s" 10 nil))
+           (assert-eql "        ()"     "~v:@s" 10 nil)))
 
 
 (test-case standard-5-colin
@@ -787,7 +787,7 @@
   (assert-err "~'aw" 234))
 
 
-(test-case go-to
+(time (test-case go-to
    (assert-eql "ac"  "~c~*~c" #\a #\b #\c #\d)
    (assert-eql "ab"  "~c~0*~c" #\a #\b #\c #\d)
    (assert-eql "ac"  "~c~1*~c" #\a #\b #\c #\d)
@@ -805,9 +805,9 @@
   (assert-err "~c~c~2*~:2*~c" #\a #\b #\c)
   (assert-err "~c~:2*~2*~c" #\a #\b #\c)
   (assert-err "~c~-1@*~0@*~c" #\a #\b #\c)
-  (assert-err "~c~4@*~0@*~c" #\a #\b #\c))
+  (assert-err "~c~4@*~0@*~c" #\a #\b #\c)))
 
-(test-case
+(time (test-case
  conditional
  (assert-eql "abc"   "~[xyz~;abc~;def~]" 1)
  (assert-eql "xyz"   "~[xyz~;abc~;def~]" 0)
@@ -851,9 +851,9 @@
  (assert-err         "~[xyz~;abc~;def~#]" 3)
  (assert-err         "~[xyz~;abc~#;def~]" 3)
  (assert-err         "~[xyz~;abc~;def~v]" 3)
- (assert-err         "~[xyz~;abc~v;def~]" 3))
+ (assert-err         "~[xyz~;abc~v;def~]" 3)))
 
-(test-case
+(time (test-case
  iteration
  (assert-eql "ABCDE"  "~{~a~a~}~a" '(a b c d) 'e)
  ;; test that, with a parameter, at most that many
@@ -871,7 +871,7 @@
  ;; test that using both modifiers is taken into account
  (assert-eql "ABCD"   "~:@{~a~a~}" '(a b) '(c d))
  (assert-eql "ABE"    "~1:@{~a~a~}~a" '(a b) 'e)
- (assert-eql "E"      "~0:@{~a~a~}~a" 'e))
+ (assert-eql "E"      "~0:@{~a~a~}~a" 'e)))
 
 
 (test-case
