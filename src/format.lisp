@@ -258,7 +258,8 @@
   (once-only ((params params))
     (jscl::with-collector (bindings)
       (dolist (spec specs)
-        (destructuring-bind (var default) spec
+        (destructuring-bind (var default)
+            spec
           (collect-bindings `(,var (let* ((param-and-offset (pop ,params))
                                           (offset (car param-and-offset))
                                           (param (cdr param-and-offset)))
@@ -637,16 +638,39 @@
           (format-write-field stream (decimal-string number) w 1 0 #\space t) )
       (format-princ stream number nil nil w 1 0 pad)))
 
-(defun fixed-printer (colonp at-signp mincol fixed always ignore  padchar stream)
-    (let* ((argument (fmt/argument 'float))
-         (negative (if (minusp argument) t nil))
-         (string (funcall ((jscl::oget argument "toFixed" "bind") argument fixed)))         
-         ;; remove: jscl:: 
-         (pad-length (fmt/compute-padding string negative colonp at-signp mincol always ignore)))
-    (fmt/print-padding pad-length padchar stream)
+;;; w - mincol d - fixed 
+;;; (format-fixed-aux    t      123.56789 4 nil nil #\space nil)
+(defun format-fixed-aux (stream number w d k ovf pad atsign)
+  ;;(print (list :number number :w w :d d :k k :ovf ovf :pad pad :atsign atsign))
+  (let* ((negative (if (minusp number) t nil))
+         (string (if d ((jscl::oget (abs number) "toFixed") d)
+                     ((jscl::oget (abs number) "toString"))))         
+         (pad-length (fmt/compute-padding string negative atsign w)))
+    (fmt/print-padding pad-length pad stream)
     (cond (negative (write-char #\- stream))
-          (at-signp (write-char #\+ stream)))
+          (atsign (write-char #\+ stream)))
     (write-string string stream)))
+
+(defun string-pad-start (string length &optional (pad " "))
+  ((jscl::oget (jscl::lisp-to-js string) "padStart") length pad))
+
+(defun string-pad-end (string length &optional (pad " "))
+  ((jscl::oget (jscl::lisp-to-js string) "padStart") length pad))
+
+(defun fmt/compute-padding (string negative at-signp mincol)
+  (let* ((comma-length  0)
+         (total-length (+ (length string) comma-length (if (or negative at-signp) 1 0)))
+         (pad-length (max 0 (- (if mincol mincol 0) total-length))))
+    pad-length))
+
+#+nil
+(defun fmt/print-padding (how-many char stream)
+  (dotimes (repeat how-many) (write-char char stream))
+  (values))
+
+(defun fmt/print-padding (how-many char stream)
+  (write-string (make-string how-many :initial-element char) stream)
+  (values))
 
 (def-format-interpreter #\F (colonp atsignp params)
   (when colonp
@@ -655,9 +679,7 @@
 			                     params
                            (format-fixed stream (next-arg) w d k ovf pad atsignp)))
 
-
-(def-format-interpreter #\%
-    (colonp atsignp params)
+(def-format-interpreter #\% (colonp atsignp params)
   (when (or colonp atsignp)
     (error 'format-error
 	         :complaint  "Cannot specify either colon or atsign for this directive."))
@@ -665,28 +687,25 @@
                            (dotimes (i count)
                              (terpri stream))))
 
-(def-format-interpreter #\&
-    (colonp atsignp params)
+(def-format-interpreter #\& (colonp atsignp params)
   (when (or colonp atsignp)
     (error 'format-error
-	         :complaint "Cannot specify either colon or atsign for this directive."))
+	         :complaint "Cannot specify either colon or atsign for this directive ~~&."))
   (interpret-bind-defaults ((count 1)) params
                            (when (plusp count)
                              (fresh-line stream)
                              (dotimes (i (1- count))
 	                             (terpri stream)))))
 
-(def-format-interpreter #\~
-    (colonp atsignp params)
+(def-format-interpreter #\~ (colonp atsignp params)
   (when (or colonp atsignp)
     (error 'format-error
-	         :complaint  "Cannot specify either colon or atsign for this directive."))
+	         :complaint  "Cannot specify either colon or atsign for this directive ~~."))
   (interpret-bind-defaults ((count 1)) params
                            (dotimes (i count)
                              (write-char #\~ stream))))
 
-(def-complex-format-interpreter #\newline
-    (colonp atsignp params directives)
+(def-complex-format-interpreter #\newline (colonp atsignp params directives)
   (when (and colonp atsignp)
     (error 'format-error
 	         :complaint  "Cannot specify both colon and atsign for this directive."))
@@ -709,8 +728,7 @@
 	                                 (format-absolute-tab stream colnum colinc)))))
 
 
-(def-format-interpreter #\*
-    (colonp atsignp params)
+(def-format-interpreter #\* (colonp atsignp params)
   (if atsignp
       (if colonp
           (error 'format-error :complaint "Cannot specify both colon and at-sign.")
@@ -739,12 +757,11 @@
                                    (dotimes (i n)
                                      (next-arg))))))
 
-(def-format-interpreter #\?
-    (colonp atsignp params string end)
-  (when colonp (error 'format-error :complaint "Cannot specify the colon modifier."))
+(def-format-interpreter #\? (colonp atsignp params string end)
+  (when colonp
+    (error 'format-error :complaint "Cannot specify the colon modifier."))
   (interpret-bind-defaults
-   ()
-   params
+   () params
    (handler-bind
 	     ((format-error
 	        #'(lambda (condition)
@@ -778,8 +795,7 @@
     (values sublists last-semi-with-colon-p remaining)))
 
 
-(def-complex-format-interpreter #\[
-    (colonp atsignp params directives)
+(def-complex-format-interpreter #\[ (colonp atsignp params directives)
   (multiple-value-bind (sublists last-semi-with-colon-p remaining)
       (parse-conditional-directive directives)
     (setf args
@@ -804,7 +820,8 @@
                            (interpret-directive-list stream (cadr sublists) orig-args args)))
                       (error "'[' - Must specify exactly two sections."))
                   (interpret-bind-defaults
-                   ((index (next-arg))) params
+                   ((index (next-arg)))
+                   params
                    (let* ((default (and last-semi-with-colon-p (pop sublists)))
                           (last (1- (length sublists)))
                           (sublist
@@ -815,19 +832,16 @@
     remaining))
 
 
-(def-complex-format-interpreter #\;
-    ()
+(def-complex-format-interpreter #\; ()
   (error "~~; not contained within either ~~[...~~] or ~~<...~~>."))
 
-(def-complex-format-interpreter #\]
-    ()
+(def-complex-format-interpreter #\] ()
   (error "No corresponding open bracket `]`."))
 
 
 (defvar *outside-args*)
 
-(def-format-interpreter #\^
-    (colonp atsignp params)
+(def-format-interpreter #\^ (colonp atsignp params)
   (when atsignp
     (error "~~^ - Cannot specify the at-sign modifier."))
   (when (and colonp (not *up-up-and-out-allowed*))
@@ -862,13 +876,13 @@
 
 ;;;
 
-(def-complex-format-interpreter #\{
-		(colonp atsignp params string end directives)
+(def-complex-format-interpreter #\{ (colonp atsignp params string end directives)
   (let ((close (find-directive directives #\} nil)))
     (unless close
       (error "~~{ - No corresponding close brace."))
     (interpret-bind-defaults
-     ((max-count nil)) params
+     ((max-count nil))
+     params
      (let* ((closed-with-colon (format-directive-colonp close))
             (posn (position close directives))
             (insides (if (zerop posn)
@@ -916,8 +930,7 @@
                (do-loop arg arg)))
          (nthcdr (1+ posn) directives))))))
 
-(def-complex-format-interpreter #\}
-    ()
+(def-complex-format-interpreter #\} ()
   (error  "No corresponding open brace `}`."))
 
 
@@ -925,11 +938,7 @@
 ;;; with-output-to-string (var &optional string-form &key element-type) declaration* form*
 ;;; without &key implementation
 (defmacro das!with-output-to-string ((var &optional string-form) &body body)
-  (cond (;;;(and destination (stringp destination))
-         string-form
-         #+nil(cond ((stringp string-form) t)
-               ((and (symbolp string-form) (stringp (symbol-value string-form))) t)
-               (t (error "~a: is not string." string-form)))
+  (cond (string-form
          (let ((buf (gensym)))
            `(let ((,var (make-string-output-stream))
                   (,buf ,string-form))
