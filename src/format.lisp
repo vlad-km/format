@@ -75,20 +75,6 @@
 ;;; Used by the expander stuff.  List of (symbol . offset) for simple args.
 (defvar *simple-args*)
 
-
-#+nil
-(defun %print-format-error (condition stream)
-  (describe condition)
-  (describe stream)
-  (das!format stream
-	           "~:[~;Error in format: ~]~
-	      ~?~@[~%  ~A~%  ~Vt@^~]"
-	           (format-error-print-banner condition)
-	           (format-error-complaint condition)
-	           (format-error-arguments condition)
-	           (format-error-control-string condition)
-	           (format-error-offset condition)))
-
 (defun %print-format-error (condition stream)
   (das!format stream
 	           "~&Error in format:~& ~a ~&args: ~a~&ctrl: ~a~&"
@@ -274,13 +260,13 @@
       (dolist (spec specs)
         (destructuring-bind (var default) spec
           (collect-bindings `(,var (let* ((param-and-offset (pop ,params))
-                                  (offset (car param-and-offset))
-                                  (param (cdr param-and-offset)))
-                             (case param
-                               (:arg (or (next-arg offset) ,default))
-                               (:remaining (length args))
-                               ((nil) ,default)
-                               (t param)))))))
+                                          (offset (car param-and-offset))
+                                          (param (cdr param-and-offset)))
+                                     (case param
+                                       (:arg (or (next-arg offset) ,default))
+                                       (:remaining (length args))
+                                       ((nil) ,default)
+                                       (t param)))))))
       `(let* ,bindings
          (when ,params
            (error 'format-error
@@ -293,38 +279,38 @@
 ;;; This macro is used to extract the next argument from the current arg list.
 ;;; This is the version used by format directive interpreters.
 (defmacro next-arg (&optional offset)
-    `(progn
-       (when (null args)
-         (error 'format-error :complaint "No more arguments."
-	              ,@(when offset  `(:offset ,offset))))
-       ;;(when *logical-block-popper* (funcall *logical-block-popper*))
-       (pop args)))
+  `(progn
+     (when (null args)
+       (error 'format-error :complaint "No more arguments."
+	            ,@(when offset  `(:offset ,offset))))
+     ;;(when *logical-block-popper* (funcall *logical-block-popper*))
+     (pop args)))
 
 (defmacro def-complex-format-interpreter (char lambda-list &body body)
-    (let ((defun-name
-            (intern
-             (concatenate 'string (string char) "-FORMAT-DIRECTIVE-INTERPRETER")))
-          (directive (gensym))
-          (directives (if lambda-list (car (last lambda-list)) (gensym))))
-      `(progn
-         (defun ,defun-name (stream ,directive ,directives orig-args args)
-           ,@(if lambda-list
-                 `((let ,(mapcar
-                          #'(lambda (var)
-                              `(,var
-                                (,(intern (concatenate 'string "FORMAT-DIRECTIVE-" (symbol-name var))
-                                          (symbol-package 'foo))
-                                 ,directive)))
-			                    (butlast lambda-list))
-		                 (values (progn ,@body) args)))
-                 `(,@body)))
-         (%set-format-directive-interpreter ,char #',defun-name))))
+  (let ((defun-name
+          (intern
+           (concatenate 'string (string char) "-FORMAT-DIRECTIVE-INTERPRETER")))
+        (directive (gensym))
+        (directives (if lambda-list (car (last lambda-list)) (gensym))))
+    `(progn
+       (defun ,defun-name (stream ,directive ,directives orig-args args)
+         ,@(if lambda-list
+               `((let ,(mapcar
+                        #'(lambda (var)
+                            `(,var
+                              (,(intern (concatenate 'string "FORMAT-DIRECTIVE-" (symbol-name var))
+                                        (symbol-package 'foo))
+                               ,directive)))
+			                  (butlast lambda-list))
+		               (values (progn ,@body) args)))
+               `(,@body)))
+       (%set-format-directive-interpreter ,char #',defun-name))))
 
 (defmacro def-format-interpreter (char lambda-list &body body)
-    (let ((directives (gensym)))
-      `(def-complex-format-interpreter ,char (,@lambda-list ,directives)
-         ,@body
-         ,directives)))
+  (let ((directives (gensym)))
+    `(def-complex-format-interpreter ,char (,@lambda-list ,directives)
+       ,@body
+       ,directives)))
 
 
 ;;;; Simple outputting noise.
@@ -395,8 +381,7 @@
 			                        padchar commachar commainterval))
        (write (next-arg) :stream stream :base ,base :radix nil :escape nil)))
 
-(def-format-interpreter #\A
-    (colonp atsignp params)
+(def-format-interpreter #\A (colonp atsignp params)
   (if params
       (interpret-bind-defaults ((mincol 0) (colinc 1) (minpad 0)
                                 (padchar #\space))
@@ -405,44 +390,40 @@
                                              mincol colinc minpad padchar))
       (princ (if colonp (or (next-arg) "()") (next-arg)) stream)))
 
-(def-format-interpreter #\S
-    (colonp atsignp params)
+(def-format-interpreter #\S (colonp atsignp params)
   (cond (params
-         (interpret-bind-defaults ((mincol 0) (colinc 1) (minpad 0) (padchar #\space))
-          params
-          (format-prin1 stream (next-arg) colonp atsignp mincol colinc minpad padchar)))
+         (interpret-bind-defaults ((mincol 0) (colinc 1) (minpad 0)
+                                   (padchar #\space))
+                                  params
+                                  (format-prin1 stream (next-arg) colonp atsignp
+                                                mincol colinc minpad padchar)))
         (colonp
          (let ((arg (next-arg)))
            (if arg (prin1 arg stream) (princ "()" stream))))
         (t
          (prin1 (next-arg) stream))))
 
-
 (defun format-print-named-character (char stream)
   (let* ((name (char-name char)))
     (cond (name
-	   (write-string name stream))
-	  ((<= 0 (char-code char) 31)
-	   ;; Print control characters as "^"<char>
-	   (write-char #\^ stream)
-	   (write-char (code-char (+ 64 (char-code char))) stream))
-	  (t
-	   (write-char char stream)))))
+	         (write-string name stream))
+	        ((<= 0 (char-code char) 31)
+           ;; Print control characters as "^"<char>
+	         (write-char #\^ stream)
+	         (write-char (code-char (+ 64 (char-code char))) stream))
+	        (t
+	         (write-char char stream)))))
 
-
-(def-format-interpreter #\C
-    (colonp atsignp params)
+(def-format-interpreter #\C (colonp atsignp params)
   (interpret-bind-defaults
-   ()
-   params
+   () params
    (if colonp
        (format-print-named-character (next-arg) stream)
        (if atsignp
            (prin1 (next-arg) stream)
            (write-char (next-arg) stream)))))
 
-(def-format-interpreter #\W
-    (colonp atsignp params)
+(def-format-interpreter #\W (colonp atsignp params)
   (interpret-bind-defaults
    ()
    params
@@ -451,27 +432,23 @@
 	       (*print-length* (and atsignp *print-length*)))
      (output-object (next-arg) stream))))
 
-(def-format-interpreter #\D
-    (colonp atsignp params)
+(def-format-interpreter #\D (colonp atsignp params)
   (interpret-format-integer 10))
 
-(def-format-interpreter #\B
-    (colonp atsignp params)
+(def-format-interpreter #\B (colonp atsignp params)
   (interpret-format-integer 2))
 
-(def-format-interpreter #\O
-    (colonp atsignp params)
+(def-format-interpreter #\O (colonp atsignp params)
   (interpret-format-integer 8))
 
-(def-format-interpreter #\X
-    (colonp atsignp params)
+(def-format-interpreter #\X (colonp atsignp params)
   (interpret-format-integer 16))
 
-(def-format-interpreter #\R
-    (colonp atsignp params)
+(def-format-interpreter #\R (colonp atsignp params)
   (if params
       (interpret-bind-defaults
-	     ((base nil) (mincol 0) (padchar #\space) (commachar #\,)(commainterval 3))
+	     ((base nil) (mincol 0) (padchar #\space) (commachar #\,)
+        (commainterval 3))
 	     params
 	     (if base
 	         (format-print-integer stream (next-arg) colonp atsignp base mincol
@@ -485,19 +462,19 @@
 	            (format-print-ordinal stream (next-arg))
 	            (format-print-cardinal stream (next-arg))))))
 
-(def-format-interpreter #\P
-    (colonp atsignp params)
-  (interpret-bind-defaults () params
-    (let ((arg (if colonp
-		   (if (eq orig-args args)
-		       (error "~~P - No previous argument.")
-		       (do ((arg-ptr orig-args (cdr arg-ptr)))
-			   ((eq (cdr arg-ptr) args)
-			    (car arg-ptr))))
-		   (next-arg))))
-      (if atsignp
-	  (write-string (if (eql arg 1) "y" "ies") stream)
-	  (unless (eql arg 1) (write-char #\s stream))))))
+(def-format-interpreter #\P (colonp atsignp params)
+  (interpret-bind-defaults
+   () params
+   (let ((arg (if colonp
+		              (if (eq orig-args args)
+		                  (error "~~P - No previous argument.")
+		                  (do ((arg-ptr orig-args (cdr arg-ptr)))
+			                    ((eq (cdr arg-ptr) args)
+			                     (car arg-ptr))))
+		              (next-arg))))
+     (if atsignp
+	       (write-string (if (eql arg 1) "y" "ies") stream)
+	       (unless (eql arg 1) (write-char #\s stream))))))
 
 ;;; Print Roman numerals
 (defun format-print-old-roman (stream n)
@@ -534,8 +511,6 @@
 			                      (- i (- cur-val cur-sub-val)))
 			                     (t i))))))
 	    ((zerop start))))
-;;; end roman 
-
 
 (defconstant cardinal-ones
   #(nil "one" "two" "three" "four" "five" "six" "seven" "eight" "nine"))
@@ -637,7 +612,21 @@
 	            (t
 	             (write-string "zeroth" stream)))))))
 
-;;; floating point
+;;; 22.3.3 FORMAT Floating-Point
+;;; Tilde F
+;;; 
+;;; general form    ~w,d,k,overflowchar,padcharF.
+;;; monkey style implementation (very restricted) only for print fixed point format
+;;;    parameters
+;;;                     ~w,d,k,o,p
+;;;                      w - width of the field,  default 0
+;;;                      d - number of digits after decimal point, default 1
+;;;                      k - always ignore
+;;;                      o - always ignore
+;;;                      p - padchar #\space
+;;;   modifiers      @ add "+" if positive value
+;;;
+
 (defun decimal-string (n)
   (write-to-string n :base 10 :radix nil :escape nil))
 
@@ -648,8 +637,18 @@
           (format-write-field stream (decimal-string number) w 1 0 #\space t) )
       (format-princ stream number nil nil w 1 0 pad)))
 
-(def-format-interpreter #\F
-    (colonp atsignp params)
+(defun fixed-printer (colonp at-signp mincol fixed always ignore  padchar stream)
+    (let* ((argument (fmt/argument 'float))
+         (negative (if (minusp argument) t nil))
+         (string (funcall ((jscl::oget argument "toFixed" "bind") argument fixed)))         
+         ;; remove: jscl:: 
+         (pad-length (fmt/compute-padding string negative colonp at-signp mincol always ignore)))
+    (fmt/print-padding pad-length padchar stream)
+    (cond (negative (write-char #\- stream))
+          (at-signp (write-char #\+ stream)))
+    (write-string string stream)))
+
+(def-format-interpreter #\F (colonp atsignp params)
   (when colonp
     (error "~~F - Cannot specify the colon modifier with this directive."))
   (interpret-bind-defaults ((w nil) (d nil) (k nil) (ovf nil) (pad #\space))
