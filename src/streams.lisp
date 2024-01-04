@@ -12,9 +12,9 @@
            \       /                  JSCL >= version 0.8.2  
       jgs   \__ __/
                ))
-              //
-             ((
-              \)
+              //                      Ugly stub for file-output-stream. Part of Moren Environment
+             ((                       Copyright © 2023, 2024  @vlad-km
+              \)                      MIT License
 |#
 
 
