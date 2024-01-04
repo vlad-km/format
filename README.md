@@ -17,10 +17,13 @@ development
 ## development
 
 ```lisp
-;;; compile 'format', save "format.js"
-(load "./repo/format/src/format.lisp" :hook (let ((x #()) x) :output "./format.js")
-;;; compile 'format-test.file', run test-cases
-(load "./repo/format/src/format-test.lisp")
+  (load "./repo/format/src/streams.lisp")
+  (setq *out (open "./repo/format/rep.txt" 'write))
+  (load "./repo/format/src/format.lisp")
+  (setq *sot *standard-output*)
+  (setq  *standard-output* *out)
+  (load "./repo/format/src/format-test.lisp")
+  (close *out)
 ```
 ## production
 
