@@ -1,18 +1,18 @@
-#  format
+#  Common Lisp function FORMAT
 
 
-rewrited FORMAT function from repo  https://github.com/public-domain/cmucl
+Rewrited FORMAT function from repo  https://github.com/public-domain/cmucl
 
-not included in the standard JSCL distribution
+Not included in the standard JSCL distribution
 
-for Windows/Electron platform only
+Only for Windows/Electron platform. How to use JSCL on the electron, see https://github.com/vlad-km/how-to/blob/main/jscl-electron.txt
 
-# status
+# Status
 
-development
+Development
 
  
-# compilation
+# Compilation
 
 ## development
 
