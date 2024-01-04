@@ -45,12 +45,11 @@ Test-case CHARACTER-CHAR-CODE-10 1/1/0
 Test-case DECIMAL-2 11/11/0
 Test-case DECIMAL-3 11/11/0
 Test-case DECIMAL-4 4/4/0
-WARNING: test FLOAT #0 with error: "Function 'FORMAT-FIXED-AUX' undefined"
-WARNING: test FLOAT #1 with error: "Function 'FORMAT-FIXED-AUX' undefined"
-WARNING: test FLOAT #2 with error: "Function 'FORMAT-FIXED-AUX' undefined"
-WARNING: test FLOAT #3 with error: "Function 'FORMAT-FIXED-AUX' undefined"
-WARNING: test FLOAT #4 with error: "Function 'FORMAT-FIXED-AUX' undefined"
-Test-case FLOAT 5/0/5
+WARNING: test FLOAT #0 incomplite
+   control-string "~f"
+   result         "0.123456789"
+   pattern        "0.123457"
+Test-case FLOAT 5/4/0
 Test-case OCTAL 11/11/0
 Test-case OCTAL-V-WITH-NIL 4/4/0
 Test-case OCTAL-MODIFIERS 8/8/0
@@ -120,3 +119,17 @@ Test-case CHARACTER-CHAR-CODE-10 1/1/0
 Test-case ANY-FROM-HTTP-CS.SMU.EDU-1 9/9/0
 Test-case PLURAL-FROM-CS.SMU.EDU-1 3/3/0
 Test-case ERRORS 22/22/0
+WARNING: test WRITE #8 with error: "Variable *PRINT-PRETTY* is unbound."
+Test-case WRITE 4/10/1
+Test-case GO-TO 16/16/0
+WARNING: test CONDITIONAL #6 incomplite
+   control-string "~:[xyz~;abc~]"
+   result         "xyz"
+   pattern        "abc"
+WARNING: test CONDITIONAL #7 incomplite
+   control-string "~:[xyz~;abc~]"
+   result         "abc"
+   pattern        "xyz"
+Test-case CONDITIONAL 31/29/0
+Test-case ITERATION 12/12/0
+Test-case DIRECTIVE.& 1/100/0
