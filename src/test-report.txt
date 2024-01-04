@@ -1,135 +1,0 @@
-Test-case CHARACTER-CHAR-CODE-10 1/1/0
-Test-case STANDARD-CHARACTER 1/1/0
-Test-case NEWLINE 4/4/0
-WARNING: test OTHER-NEWLINE #1 incomplite
-   control-string "X~#%"
-   result         "X\n"
-   pattern        "X"
-Test-case OTHER-NEWLINE 4/3/0
-Test-case FRESH-LINE 6/6/0
-Test-case TILDE 4/4/0
-WARNING: test DIRECTIVE-P #3 incomplite
-   control-string "~P"
-   result         ""
-   pattern        "s"
-WARNING: test DIRECTIVE-P #15 incomplite
-   control-string "~@P"
-   result         "y"
-   pattern        "ies"
-Test-case DIRECTIVE-P 16/14/0
-WARNING: test RADIX-ENGLISH-CARDINAL-NUMBERS #23 incomplite
-   control-string "~r"
-   result         "forty"
-   pattern        "fourty"
-Test-case RADIX-ENGLISH-CARDINAL-NUMBERS 42/41/0
-WARNING: test RADIX-ENGLISH-NUMBERS #12 incomplite
-   control-string "~:r"
-   result         "twelfth"
-   pattern        "twelvth"
-WARNING: test RADIX-ENGLISH-NUMBERS #23 incomplite
-   control-string "~:r"
-   result         "fortieth"
-   pattern        "fourtieth"
-WARNING: test RADIX-ENGLISH-NUMBERS #35 incomplite
-   control-string "~:r"
-   result         "four thousand twelfth"
-   pattern        "four thousand twelvth"
-Test-case RADIX-ENGLISH-NUMBERS 42/39/0
-Test-case RADIX-ROMAN-NUMBERS 32/32/0
-Test-case RADIX-ROMAN-NUMERALS 32/32/0
-Test-case RADIX-NUMBERS-MINCOL 5/5/0
-Test-case RADIX-NUMBER-PADCHAR-COLON-COMMA 6/6/0
-Test-case RADIX-WITH-MODIFIERS 8/8/0
-Test-case DECIMAL 11/11/0
-Test-case DECIMAL-1 11/11/0
-Test-case DECIMAL-2 11/11/0
-Test-case DECIMAL-3 11/11/0
-Test-case DECIMAL-4 4/4/0
-WARNING: test FLOAT #0 incomplite
-   control-string "~f"
-   result         "0.123456789"
-   pattern        "0.123457"
-Test-case FLOAT 5/4/0
-Test-case OCTAL 11/11/0
-Test-case OCTAL-V-WITH-NIL 4/4/0
-Test-case OCTAL-MODIFIERS 8/8/0
-Test-case BINARY-MINCOL 5/5/0
-Test-case BINARY-PADCHAR 1/1/0
-Test-case BINARY-MODIFIER 5/5/0
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #0 incomplite
-   control-string "~#X"
-   result         "1b3fe"
-   pattern        "1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #1 incomplite
-   control-string "~#X"
-   result         "1b3fe"
-   pattern        "1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #2 incomplite
-   control-string "~#X"
-   result         "1b3fe"
-   pattern        "1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #3 incomplite
-   control-string "~#X"
-   result         "1b3fe"
-   pattern        "1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #4 incomplite
-   control-string "~#X"
-   result         "1b3fe"
-   pattern        "1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #5 incomplite
-   control-string "~#X"
-   result         " 1b3fe"
-   pattern        " 1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #6 incomplite
-   control-string "~#X"
-   result         "  1b3fe"
-   pattern        "  1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #7 incomplite
-   control-string "~#X"
-   result         "   1b3fe"
-   pattern        "   1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #8 incomplite
-   control-string "~#X"
-   result         "    1b3fe"
-   pattern        "    1B3FE"
-WARNING: test X-DIRECTIVE-INTEGRATED-TEXT #9 incomplite
-   control-string "~#X"
-   result         "     1b3fe"
-   pattern        "     1B3FE"
-Test-case X-DIRECTIVE-INTEGRATED-TEXT 40/30/0
-Test-case AESTHETIC-EQL-PRINC 6/6/0
-Test-case AESTHETIC-MODIFIER-NIL 3/3/0
-Test-case AESTHETIC-MINPAD-COLINC-PADCHAR 3/3/0
-WARNING: test AESTHETIC-PARAMS #0 with error: "Unknown format directive. (~3,,+2A)"
-WARNING: test AESTHETIC-PARAMS #2 with error: "Unknown format directive. (~3,,-1A)"
-WARNING: test AESTHETIC-PARAMS #4 with error: "Unknown format directive. (~3,,-1A)"
-Test-case AESTHETIC-PARAMS 5/2/3
-Test-case AESTHETIC-PARAMS-1 12/12/0
-Test-case AESTHETIC-PARAMS-2 10/10/0
-Test-case STANDARD-DIRECTIVE 15/15/0
-Test-case STANDARD-1 10/10/0
-Test-case STANDARD-2 10/10/0
-Test-case STANDARD-3 10/10/0
-Test-case STANDARD-4 10/10/0
-Test-case STANDARD-5-COLIN 8/8/0
-Test-case STANDARD-6-MINPAD 11/11/0
-Test-case STANDARD-7-PADCHAR 8/8/0
-Test-case STANDARD-8-OTHERS 7/7/0
-Test-case STANDARD-9-OTHERS 7/7/0
-Test-case ANY-FROM-HTTP-CS.SMU.EDU-1 9/9/0
-Test-case PLURAL-FROM-CS.SMU.EDU-1 3/3/0
-Test-case ERRORS 22/22/0
-WARNING: test WRITE #8 with error: "Variable *PRINT-PRETTY* is unbound."
-Test-case WRITE 4/10/1
-Test-case GO-TO 16/16/0
-WARNING: test CONDITIONAL #6 incomplite
-   control-string "~:[xyz~;abc~]"
-   result         "xyz"
-   pattern        "abc"
-WARNING: test CONDITIONAL #7 incomplite
-   control-string "~:[xyz~;abc~]"
-   result         "abc"
-   pattern        "xyz"
-Test-case CONDITIONAL 31/29/0
-Test-case ITERATION 12/12/0
-Test-case DIRECTIVE.& 1/100/0
