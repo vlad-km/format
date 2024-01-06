@@ -783,6 +783,47 @@
 	       (%format stream (next-arg) (next-arg))))))
 
 
+;;; todo: redesig ?
+(def-format-interpreter #\/ (string start end colonp atsignp params)
+  (let ((symbol (extract-user-function-name string start end)))
+    (collect ((args))
+      (dolist (param-and-offset params)
+	(let ((param (cdr param-and-offset)))
+	  (case param
+	    (:arg (args (next-arg)))
+	    (:remaining (args (length args)))
+	    (t (args param)))))
+      (apply (fdefinition symbol) stream (next-arg) colonp atsignp (args)))))
+
+(defun extract-user-function-name (string start end)
+  (let ((slash (position #\/ string :start start :end (1- end)
+			 :from-end t)))
+    (unless slash
+      (error 'format-error
+	     :complaint "Malformed ~~/ directive."))
+    (let* ((name (string-upcase (let ((foo string))
+				  ;; Hack alert: This is to keep the compiler
+				  ;; quiet about deleting code inside the
+				  ;; subseq expansion.
+				  (subseq foo (1+ slash) (1- end)))))
+	   (first-colon (position #\: name))
+	   (second-colon (if first-colon (position #\: name :start (1+ first-colon))))
+	   (package-name (if first-colon
+			     (subseq name 0 first-colon)
+			     "COMMON-LISP-USER"))
+	   (package (find-package package-name)))
+      (unless package
+	(error 'format-error
+	       :complaint "No package named ~S"
+	       :arguments (list package-name)))
+      (intern (cond
+                ((and second-colon (= second-colon (1+ first-colon)))
+                 (subseq name (1+ second-colon)))
+                (first-colon
+                 (subseq name (1+ first-colon)))
+                (t name))
+              package))))
+
 
 ;;; Coditionals
 
