@@ -697,6 +697,7 @@
                              (dotimes (i (1- count))
 	                             (terpri stream)))))
 
+;;; todo: (dotimes (write-char)) -> (write-string (make-string))
 (def-format-interpreter #\~ (colonp atsignp params)
   (when (or colonp atsignp)
     (error 'format-error
@@ -705,6 +706,7 @@
                            (dotimes (i count)
                              (write-char #\~ stream))))
 
+;;; todo: ????
 (def-complex-format-interpreter #\newline (colonp atsignp params directives)
   (when (and colonp atsignp)
     (error 'format-error
@@ -716,6 +718,7 @@
       (cons (string-left-trim '(#\space #\newline #\tab) (car directives)) (cdr directives))
       directives))
 
+;;; todo: add relative & absolute
 (def-format-interpreter #\T
     (colonp atsignp params)
   (if colonp
@@ -757,6 +760,7 @@
                                    (dotimes (i n)
                                      (next-arg))))))
 
+;;; todo: bind->case ???
 (def-format-interpreter #\? (colonp atsignp params string end)
   (when colonp
     (error 'format-error :complaint "Cannot specify the colon modifier."))
@@ -991,6 +995,7 @@
      (%format destination control-string format-arguments)
      nil)))
 
+;;; todo: %format->%format-aux ??
 (defun %format (stream string orig-args &optional (args orig-args))
   (check-type string string)
   (catch 'up-and-out
