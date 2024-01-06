@@ -761,6 +761,7 @@
                                      (next-arg))))))
 
 ;;; todo: bind->case ???
+;;; bug:
 (def-format-interpreter #\? (colonp atsignp params string end)
   (when colonp
     (error 'format-error :complaint "Cannot specify the colon modifier."))
