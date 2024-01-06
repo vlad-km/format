@@ -314,11 +314,7 @@
 	         args)))))
 
 (defun expand-control-string (string)
-  (let* ((string (etypecase string
-		               (simple-string
-		                string)
-		               (string
-		                (coerce string 'simple-string))))
+  (let* ((string strin)
 	       (*default-format-error-control-string* string)
 	       (directives (tokenize-control-string string)))
     `(block nil
