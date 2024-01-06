@@ -375,7 +375,8 @@
      (pprint-pop)
      (pop args)))
 
-;;; todo: ~:C directive
+;;; 
+#+nil
 (defmacro def-complex-format-directive (char lambda-list &body body)
   (let ((defun-name (intern (jscl:!format nil "~:C-FORMAT-DIRECTIVE-EXPANDER" char)))
 	      (directive (gensym))
@@ -387,6 +388,24 @@
                         #'(lambda (var)
 				                    `(,var
 				                      (,(intern (concatenate 'string "FORMAT-DIRECTIVE-" (symbol-name var))
+					                              (symbol-package 'foo))
+				                       ,directive)))
+			                  (butlast lambda-list))
+		               ,@body))
+	             `(,@body)))
+       (%set-format-directive-expander ,char #',defun-name))))
+
+(defmacro def-complex-format-directive (char lambda-list &body body)
+  (let ((defun-name (intern (concatenate 'string (string char) "-FORMAT-DIRECTIVE-EXPANDER")))
+	      (directive (gensym))
+	      (directives (if lambda-list (car (last lambda-list)) (gensym))))
+    `(progn
+       (defun ,defun-name (,directive ,directives)
+	       ,@(if lambda-list
+	             `((let ,(mapcar
+                        #'(lambda (var)
+				                    `(,var
+				                      (,(intern (concatenate 'string "FORMATTER-DIRECTIVE-" (symbol-name var))
 					                              (symbol-package 'foo))
 				                       ,directive)))
 			                  (butlast lambda-list))
