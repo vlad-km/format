@@ -190,7 +190,7 @@
         (make-format-directive :string string :start start :end (1+ posn)
                                :character (char-upcase char)
                                :colonp colonp :atsignp atsignp
-                               :params (reverse params))))))
+                               :params (nreverse params))))))
 
 (defun tokenize-control-string (string)
   (let ((index 0)
@@ -205,7 +205,7 @@
         (let ((directive (parse-directive string next-directive)))
           (push directive result)
           (setq index (format-directive-end directive)))))
-    (reverse result)))
+    (nreverse result)))
 
 
 (defun %set-format-directive-expander (char fn)
