@@ -357,6 +357,7 @@
 	      symbol)))
 
 ;;; note: wtf?
+#+nil
 (defun need-hairy-args ()
   (when *only-simple-args*
     ))
