@@ -404,6 +404,7 @@
         (t
          (prin1 (next-arg) stream))))
 
+;;; todo: wrong case
 (defun format-print-named-character (char stream)
   (let* ((name (char-name char)))
     (cond (name
