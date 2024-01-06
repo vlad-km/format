@@ -324,14 +324,10 @@
   (let ((results nil)
 	      (remaining-directives directives))
     (loop
-      (unless remaining-directives
-	      (return))
-      (multiple-value-bind
-	          (form new-directives)
-	        (expand-directive (car remaining-directives)
-			                      (cdr remaining-directives))
-	      (when form
-          (push form results))
+      (unless remaining-directives (return))
+      (multiple-value-bind (form new-directives)
+	        (expand-directive (car remaining-directives)(cdr remaining-directives))
+	      (when form (push form results))
 	      (setf remaining-directives new-directives)))
     (reverse results)))
 
