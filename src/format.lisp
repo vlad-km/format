@@ -33,12 +33,12 @@
 
 (defparameter +digits+ "0123456789")
 (defconstant +format-directive-limit+ (1+ (char-code #\~)))
-(defparameter *format-directive-expanders*
-  (make-array +format-directive-limit+ :initial-element nil))
-(defparameter *format-directive-interpreters*
-  (make-array +format-directive-limit+ :initial-element nil))
-(defparameter *default-format-error-control-string* nil)
-(defparameter *default-format-error-offset* nil)
+(defvar *format-directive-expanders* (make-array +format-directive-limit+
+                                                 :initial-element nil))
+(defvar *format-directive-interpreters* (make-array +format-directive-limit+
+                                                    :initial-element nil))
+(defvar *default-format-error-control-string* nil)
+(defvar *default-format-error-offset* nil)
 
 
 ;;;; Specials used to communicate information.
@@ -75,6 +75,7 @@
 ;;; Used by the expander stuff.  List of (symbol . offset) for simple args.
 (defvar *simple-args*)
 
+
 (defun %print-format-error (condition stream)
   (das!format stream
 	           "~&Error in format:~& ~a ~&args: ~a~&ctrl: ~a~&"
@@ -87,8 +88,8 @@
 (jscl::fset 'svref (fdefinition 'aref))
 
 
-(defvar *default-format-error-control-string* nil)
-(defvar *default-format-error-offset* nil)
+#+nil (defvar *default-format-error-control-string* nil)
+#+nil (defvar *default-format-error-offset* nil)
 
 (define-condition format-error (error)
   ((complaint :reader format-error-complaint
@@ -286,6 +287,183 @@
 	            ,@(when offset  `(:offset ,offset))))
      ;;(when *logical-block-popper* (funcall *logical-block-popper*))
      (pop args)))
+
+;;; formater
+
+(defmacro formatter (control-string)
+  `#',(%formatter control-string))
+
+(defun %formatter (control-string)
+  (block nil
+    (catch 'need-orig-args
+      (let* ((*simple-args* nil)
+	           (*only-simple-args* t)
+	           (guts (expand-control-string control-string))
+	           (args nil))
+	      (dolist (arg *simple-args*)
+	        (push `(,(car arg)
+		              (error 'format-error :complaint "Required argument missing"
+		                                   :control-string ,control-string :offset ,(cdr arg)))
+		            args))
+	      (return `(lambda (stream &optional ,@args &rest args) ,guts args))))
+    (let ((*orig-args-available* t)
+	        (*only-simple-args* nil))
+      `(lambda (stream &rest orig-args)
+	       (let ((args orig-args))
+	         ,(expand-control-string control-string)
+	         args)))))
+
+(defun expand-control-string (string)
+  (let* ((string (etypecase string
+		               (simple-string
+		                string)
+		               (string
+		                (coerce string 'simple-string))))
+	       (*default-format-error-control-string* string)
+	       (directives (tokenize-control-string string)))
+    `(block nil
+       ,@(expand-directive-list directives))))
+
+(defun expand-directive-list (directives)
+  (let ((results nil)
+	      (remaining-directives directives))
+    (loop
+      (unless remaining-directives
+	      (return))
+      (multiple-value-bind
+	          (form new-directives)
+	        (expand-directive (car remaining-directives)
+			                      (cdr remaining-directives))
+	      (when form
+          (push form results))
+	      (setf remaining-directives new-directives)))
+    (reverse results)))
+
+(defun expand-directive (directive more-directives)
+  (etypecase directive
+    (format-directive
+     (let ((expander
+	           (aref *format-directive-expanders*
+		               (char-code (format-directive-character directive))))
+	         (*default-format-error-offset*
+	           (1- (format-directive-end directive))))
+       (if expander
+	         (funcall expander directive more-directives)
+	         (error 'format-error
+		              :complaint (intl:gettext "Unknown directive.")))))
+    (simple-string
+     (values `(write-string ,directive stream)
+	           more-directives))))
+
+(defun expand-next-arg (&optional offset)
+  (if (or *orig-args-available* (not *only-simple-args*))
+      `(,*expander-next-arg-macro*
+	      ,*default-format-error-control-string*
+	      ,(or offset *default-format-error-offset*))
+      (let ((symbol (gensym "FORMAT-ARG-")))
+	      (push (cons symbol (or offset *default-format-error-offset*))
+	            *simple-args*)
+	      symbol)))
+
+(defun need-hairy-args ()
+  (when *only-simple-args*
+    ))
+
+(defmacro expander-next-arg (string offset)
+  `(if args
+       (pop args)
+       (error 'format-error
+	            :complaint (intl:gettext "No more arguments.")
+	            :control-string ,string
+	            :offset ,offset)))
+
+(defmacro expander-pprint-next-arg (string offset)
+  `(progn
+     (when (null args)
+       (error 'format-error
+	            :complaint (intl:gettext "No more arguments.")
+	            :control-string ,string
+	            :offset ,offset))
+     (pprint-pop)
+     (pop args)))
+
+(defmacro def-complex-format-directive (char lambda-list &body body)
+  (let ((defun-name (intern (cl:format nil
+				                               "~:@(~:C~)-FORMAT-DIRECTIVE-EXPANDER"
+				                               char)))
+	      (directive (gensym))
+	      (directives (if lambda-list (car (last lambda-list)) (gensym))))
+    `(progn
+       (defun ,defun-name (,directive ,directives)
+	       ,@(if lambda-list
+	             `((let ,(mapcar #'(lambda (var)
+				                           `(,var
+				                             (,(intern (concatenate
+						                                    'string
+						                                    "FORMAT-DIRECTIVE-"
+						                                    (symbol-name var))
+					                                     (symbol-package 'foo))
+				                              ,directive)))
+			                         (butlast lambda-list))
+		               ,@body))
+	             `((declare (ignore ,directive ,directives))
+		             ,@body)))
+       (%set-format-directive-expander ,char #',defun-name))))
+
+(defmacro def-format-directive (char lambda-list &body body)
+  (let ((directives (gensym))
+	      (declarations nil)
+	      (body-without-decls body))
+    (loop
+      (let ((form (car body-without-decls)))
+	      (unless (and (consp form) (eq (car form) 'declare))
+	        (return))
+	      (push (pop body-without-decls) declarations)))
+    (setf declarations (reverse declarations))
+    `(def-complex-format-directive ,char (,@lambda-list ,directives)
+       ,@declarations
+       (values (progn ,@body-without-decls)
+	             ,directives))))
+
+(defmacro expand-bind-defaults (specs params &body body)
+  (once-only ((params params))
+    (if specs
+	      (collect ((expander-bindings) (runtime-bindings))
+		      (dolist (spec specs)
+		        (destructuring-bind (var default) spec
+		          (let ((symbol (gensym)))
+		            (expander-bindings
+			           `(,var ',symbol))
+		            (runtime-bindings
+			           `(list ',symbol
+			                  (let* ((param-and-offset (pop ,params))
+				                       (offset (car param-and-offset))
+				                       (param (cdr param-and-offset)))
+				                  (case param
+				                    (:arg `(or ,(expand-next-arg offset)
+					                             ,,default))
+				                    (:remaining
+				                     (setf *only-simple-args* nil)
+				                     '(length args))
+				                    ((nil) ,default)
+				                    (t param))))))))
+		      `(let ,(expander-bindings)
+		         `(let ,(list ,@(runtime-bindings))
+		            ,@(if ,params
+			                (error 'format-error
+				                     :complaint
+				                     (intl:gettext "Too many parameters, expected no more than ~D")
+				                     :arguments (list ,(length specs))
+				                     :offset (caar ,params)))
+		            ,,@body)))
+	      `(progn
+	         (when ,params
+	           (error 'format-error
+		                :complaint (intl:gettext "Too many parameters, expected no more than 0")
+		                :offset (caar ,params)))
+	         ,@body))))
+
+;;;
 
 (defmacro def-complex-format-interpreter (char lambda-list &body body)
   (let ((defun-name
