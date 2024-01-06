@@ -627,7 +627,7 @@
 	         (write-string name stream))
 	        ((<= 0 (char-code char) 31)
            ;; Print control characters as "^"<char>
-	         (write-char #\^ stream)
+	         (write-char (code-char 94) stream)
 	         (write-char (code-char (+ 64 (char-code char))) stream))
 	        (t
 	         (write-char char stream)))))
