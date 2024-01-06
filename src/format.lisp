@@ -343,9 +343,8 @@
 	         (funcall expander directive more-directives)
 	         (error 'format-error
 		              :complaint (intl:gettext "Unknown directive.")))))
-    (simple-string
-     (values `(write-string ,directive stream)
-	           more-directives))))
+    (string (values `(write-string ,directive stream)
+	                  more-directives))))
 
 (defun expand-next-arg (&optional offset)
   (if (or *orig-args-available* (not *only-simple-args*))
