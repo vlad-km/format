@@ -425,6 +425,7 @@
            (prin1 (next-arg) stream)
            (write-char (next-arg) stream)))))
 
+;;; bug:
 (def-format-interpreter #\W (colonp atsignp params)
   (interpret-bind-defaults
    ()
@@ -780,6 +781,8 @@
      (if atsignp
 	       (setf args (%format stream (next-arg) orig-args args))
 	       (%format stream (next-arg) (next-arg))))))
+
+
 
 ;;; Coditionals
 
