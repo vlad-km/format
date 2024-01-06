@@ -641,7 +641,12 @@
            (prin1 (next-arg) stream)
            (write-char (next-arg) stream)))))
 
-;;; bug:
+;;; bug: done
+
+(defvar *print-pretty*)
+(defvar *print-level*)
+(defvar *print-length*)
+
 (def-format-interpreter #\W (colonp atsignp params)
   (interpret-bind-defaults
    ()
