@@ -410,8 +410,7 @@
        (values (progn ,@body-without-decls)
 	             ,directives))))
 
-;;; todo: collector
-;;;       wrong  runtime-bindings
+#+nil
 (defmacro expand-bind-defaults (specs params &body body)
   (once-only ((params params))
     (if specs
@@ -443,6 +442,44 @@
 	           (error 'format-error :complaint "Too many parameters, expected no more than 0"
 		                              :offset (caar ,params)))
 	         ,@body))))
+
+(defmacro expand-bind-defaults (specs params &body body)
+  (once-only
+   ((params params))
+   (if specs
+	     (jscl::with-collector
+        (expander-bindings)
+        (jscl::with-collector
+         (runtime-bindings)
+         (dolist (spec specs)
+		       (destructuring-bind (var default) spec
+		         (let ((symbol (gensym)))
+		           (expander-bindings `(,var ',symbol))
+		           (runtime-bindings
+			          `(list ',symbol
+			                 (let* ((param-and-offset (pop ,params))
+				                      (offset (car param-and-offset))
+				                      (param (cdr param-and-offset)))
+				                 (case param
+				                   (:arg `(or ,(expand-next-arg offset) ,,default))
+				                   (:remaining
+				                    (setf *only-simple-args* nil)
+				                    '(length args))
+				                   ((nil) ,default)
+				                   (t param))))))))
+		     `(let ,(expander-bindings)
+		        `(let ,(list ,@(runtime-bindings))
+		           ,@(if ,params
+			               (error 'format-error
+                            :complaint "Too many parameters, expected no more than ~D"
+				                    :arguments (list ,(length specs)) :offset (caar ,params)))
+		           ,,@body))))
+	   `(progn
+	      (when ,params
+	        (error 'format-error
+                 :complaint "Too many parameters, expected no more than 0"
+		             :offset (caar ,params)))
+	      ,@body))))
 
 ;;;
 
