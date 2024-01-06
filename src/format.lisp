@@ -463,6 +463,7 @@
 	            (format-print-ordinal stream (next-arg))
 	            (format-print-cardinal stream (next-arg))))))
 
+;;; bug: ? see rep.txt
 (def-format-interpreter #\P (colonp atsignp params)
   (interpret-bind-defaults
    () params
