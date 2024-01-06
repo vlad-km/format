@@ -527,7 +527,6 @@
        ,@body
        ,directives)))
 
-
 ;;;; Simple outputting noise.
 (defun format-write-field (stream string mincol colinc minpad padchar padleft)
   (unless padleft (write-string string stream))
@@ -596,6 +595,9 @@
 			                        padchar commachar commainterval))
        (write (next-arg) :stream stream :base ,base :radix nil :escape nil)))
 
+;;; from there, begun def-format directives
+
+;;; tilde A
 (def-format-interpreter #\A (colonp atsignp params)
   (if params
       (interpret-bind-defaults ((mincol 0) (colinc 1) (minpad 0)
@@ -605,6 +607,21 @@
                                              mincol colinc minpad padchar))
       (princ (if colonp (or (next-arg) "()") (next-arg)) stream)))
 
+
+(def-format-directive #\A (colonp atsignp params)
+  (if params
+      (expand-bind-defaults ((mincol 0) (colinc 1) (minpad 0)
+			     (padchar #\space))
+		     params
+	`(format-princ stream ,(expand-next-arg) ',colonp ',atsignp
+		       ,mincol ,colinc ,minpad ,padchar))
+      `(princ ,(if colonp
+		   `(or ,(expand-next-arg) "()")
+		   (expand-next-arg))
+	      stream)))
+
+
+;;; tilde S
 (def-format-interpreter #\S (colonp atsignp params)
   (cond (params
          (interpret-bind-defaults ((mincol 0) (colinc 1) (minpad 0)
