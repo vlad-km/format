@@ -364,42 +364,34 @@
 (defmacro expander-next-arg (string offset)
   `(if args
        (pop args)
-       (error 'format-error
-	            :complaint (intl:gettext "No more arguments.")
-	            :control-string ,string
-	            :offset ,offset)))
+       (error 'format-error :complaint "No more arguments." :control-string ,string
+	                          :offset ,offset)))
 
 (defmacro expander-pprint-next-arg (string offset)
   `(progn
      (when (null args)
-       (error 'format-error
-	            :complaint (intl:gettext "No more arguments.")
-	            :control-string ,string
-	            :offset ,offset))
+       (error 'format-error :complaint "No more arguments."
+	                          :control-string ,string :offset ,offset))
      (pprint-pop)
      (pop args)))
 
+;;; todo: ~:C directive
 (defmacro def-complex-format-directive (char lambda-list &body body)
-  (let ((defun-name (intern (cl:format nil
-				                               "~:@(~:C~)-FORMAT-DIRECTIVE-EXPANDER"
-				                               char)))
+  (let ((defun-name (intern (jscl:!format nil "~:C-FORMAT-DIRECTIVE-EXPANDER" char)))
 	      (directive (gensym))
 	      (directives (if lambda-list (car (last lambda-list)) (gensym))))
     `(progn
        (defun ,defun-name (,directive ,directives)
 	       ,@(if lambda-list
-	             `((let ,(mapcar #'(lambda (var)
-				                           `(,var
-				                             (,(intern (concatenate
-						                                    'string
-						                                    "FORMAT-DIRECTIVE-"
-						                                    (symbol-name var))
-					                                     (symbol-package 'foo))
-				                              ,directive)))
-			                         (butlast lambda-list))
+	             `((let ,(mapcar
+                        #'(lambda (var)
+				                    `(,var
+				                      (,(intern (concatenate 'string "FORMAT-DIRECTIVE-" (symbol-name var))
+					                              (symbol-package 'foo))
+				                       ,directive)))
+			                  (butlast lambda-list))
 		               ,@body))
-	             `((declare (ignore ,directive ,directives))
-		             ,@body)))
+	             `(,@body)))
        (%set-format-directive-expander ,char #',defun-name))))
 
 (defmacro def-format-directive (char lambda-list &body body)
