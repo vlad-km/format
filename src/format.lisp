@@ -394,6 +394,7 @@
 	             `(,@body)))
        (%set-format-directive-expander ,char #',defun-name))))
 
+;;; todo: declaration ?
 (defmacro def-format-directive (char lambda-list &body body)
   (let ((directives (gensym))
 	      (declarations nil)
