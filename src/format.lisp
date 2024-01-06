@@ -349,7 +349,7 @@
 (defun expand-next-arg (&optional offset)
   (if (or *orig-args-available* (not *only-simple-args*))
       `(,*expander-next-arg-macro*
-	      ,*default-format-error-control-string*
+        ,*default-format-error-control-string*
 	      ,(or offset *default-format-error-offset*))
       (let ((symbol (gensym "FORMAT-ARG-")))
 	      (push (cons symbol (or offset *default-format-error-offset*))
