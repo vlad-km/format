@@ -410,6 +410,7 @@
        (values (progn ,@body-without-decls)
 	             ,directives))))
 
+;;; todo: collector
 (defmacro expand-bind-defaults (specs params &body body)
   (once-only ((params params))
     (if specs
@@ -417,8 +418,7 @@
 		      (dolist (spec specs)
 		        (destructuring-bind (var default) spec
 		          (let ((symbol (gensym)))
-		            (expander-bindings
-			           `(,var ',symbol))
+		            (expander-bindings `(,var ',symbol))
 		            (runtime-bindings
 			           `(list ',symbol
 			                  (let* ((param-and-offset (pop ,params))
