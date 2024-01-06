@@ -285,11 +285,10 @@
      (when (null args)
        (error 'format-error :complaint "No more arguments."
 	            ,@(when offset  `(:offset ,offset))))
-     ;;(when *logical-block-popper* (funcall *logical-block-popper*))
+     (when *logical-block-popper* (funcall *logical-block-popper*))
      (pop args)))
 
 ;;; formater
-
 (defmacro formatter (control-string)
   `#',(%formatter control-string))
 
@@ -502,7 +501,6 @@
 	      ,@body))))
 
 ;;;
-
 (defmacro def-complex-format-interpreter (char lambda-list &body body)
   (let ((defun-name
           (intern
@@ -620,7 +618,7 @@
         (t
          (prin1 (next-arg) stream))))
 
-;;; todo: wrong case
+;;; todo: wrong case note: done
 (defun format-print-named-character (char stream)
   (let* ((name (char-name char)))
     (cond (name
@@ -641,7 +639,7 @@
            (prin1 (next-arg) stream)
            (write-char (next-arg) stream)))))
 
-;;; bug: done
+;;; bug: note:done
 
 (defvar *print-pretty*)
 (defvar *print-level*)
