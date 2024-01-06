@@ -342,7 +342,7 @@
        (if expander
 	         (funcall expander directive more-directives)
 	         (error 'format-error
-		              :complaint (intl:gettext "Unknown directive.")))))
+		              :complaint "Unknown directive."))))
     (string (values `(write-string ,directive stream)
 	                  more-directives))))
 
