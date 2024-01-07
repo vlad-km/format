@@ -289,12 +289,12 @@
   (posn 0 :type posn))
 
 (defmacro enqueue (stream type &rest args)
-  (let ((constructor (intern (concatenate 'string
-					                                "MAKE-"
-					                                (symbol-name type)))))
+  (let ((constructor
+          (intern
+           (concatenate 'string "MAKE-" (symbol-name type)))))
     (once-only ((stream stream)
-		            (entry `(,constructor :posn
-				                              (index-posn
+                (entry `(,constructor :posn
+                                      (index-posn
 				                               (pretty-stream-buffer-fill-pointer
 					                              ,stream)
 				                               ,stream)
