@@ -1045,7 +1045,7 @@
 	             (terpri stream)))))
       '(fresh-line stream)))
 
-;;; tilde ~
+;;; tilda ~
 ;;; todo: (dotimes (write-char)) -> (write-string (make-string))
 (def-format-interpreter #\~ (colonp atsignp params)
   (when (or colonp atsignp)
@@ -1293,7 +1293,75 @@
                 (format-directive-colonp close-or-semi)))))
     (values sublists last-semi-with-colon-p remaining)))
 
+(defun expand-maybe-conditional (sublist)
+  (flet ((hairy ()
+	         `(let ((prev-args args)
+		              (arg ,(expand-next-arg)))
+	            (when arg
+		            (setf args prev-args)
+		            ,@(expand-directive-list sublist)))))
+    (if *only-simple-args*
+	      (multiple-value-bind
+	            (guts new-args)
+	          (let ((*simple-args* *simple-args*))
+	            (values (expand-directive-list sublist)
+		                  *simple-args*))
+	        (cond ((and new-args (eq *simple-args* (cdr new-args)))
+		             (setf *simple-args* new-args)
+		             `(when ,(caar new-args)
+		                ,@guts))
+		            (t
+		             (setf *only-simple-args* nil)
+		             (hairy))))
+	      (hairy))))
 
+(defun expand-true-false-conditional (true false)
+  (let ((arg (expand-next-arg)))
+    (flet ((hairy ()
+	           `(if ,arg
+		              (progn
+		                ,@(expand-directive-list true))
+		              (progn
+		                ,@(expand-directive-list false)))))
+      (if *only-simple-args*
+	        (multiple-value-bind
+	              (true-guts true-args true-simple)
+	            (let ((*simple-args* *simple-args*)
+		                (*only-simple-args* t))
+		            (values (expand-directive-list true)
+			                  *simple-args*
+			                  *only-simple-args*))
+	          (multiple-value-bind
+		              (false-guts false-args false-simple)
+		            (let ((*simple-args* *simple-args*)
+		                  (*only-simple-args* t))
+		              (values (expand-directive-list false)
+			                    *simple-args*
+			                    *only-simple-args*))
+	            (if (= (length true-args) (length false-args))
+		              `(if ,arg
+		                   (progn
+			                   ,@true-guts)
+		                   ,(do ((false false-args (cdr false))
+			                       (true true-args (cdr true))
+			                       (bindings nil (cons `(,(caar false) ,(caar true))
+						                                     bindings)))
+			                      ((eq true *simple-args*)
+			                       (setf *simple-args* true-args)
+			                       (setf *only-simple-args*
+				                           (and true-simple false-simple))
+			                       (if bindings
+				                         `(let ,bindings
+				                            ,@false-guts)
+				                         `(progn
+				                            ,@false-guts)))))
+		              (progn
+		                (setf *only-simple-args* nil)
+		                (hairy)))))
+	        (hairy)))))
+
+
+;;; tilda #\[
 (def-complex-format-interpreter #\[ (colonp atsignp params directives)
   (multiple-value-bind (sublists last-semi-with-colon-p remaining)
       (parse-conditional-directive directives)
@@ -1330,16 +1398,69 @@
                      (interpret-directive-list stream sublist orig-args args))))))
     remaining))
 
+(def-complex-format-directive #\[
+    (colonp atsignp params directives)
+  (multiple-value-bind
+        (sublists last-semi-with-colon-p remaining)
+      (parse-conditional-directive directives)
+    (values
+     (if atsignp
+	       (if colonp
+	           (error 'format-error
+		                :complaint "Cannot specify both the colon and at-sign modifiers.")
+	           (if (cdr sublists)
+		             (error 'format-error
+			                  :complaint  "Can only specify one section")
+		             (expand-bind-defaults () params
+		               (expand-maybe-conditional (car sublists)))))
+	       (if colonp
+	           (if (= (length sublists) 2)
+		             (progn
+		               (when last-semi-with-colon-p
+		                 (error 'format-error
+			                      :complaint  "~~:; directive not effective in ~~:["))
+		               (expand-bind-defaults () params
+		                 (expand-true-false-conditional (car sublists)
+						                                        (cadr sublists))))
+		             (error 'format-error
+			                  :complaint "Must specify exactly two sections."))
+	           (expand-bind-defaults ((index nil)) params
+	             (setf *only-simple-args* nil)
+	             (let ((clauses nil)
+		                 (case `(or ,index ,(expand-next-arg))))
+		             (when last-semi-with-colon-p
+		               (push `(t ,@(expand-directive-list (pop sublists)))
+			                   clauses))
+		             (let ((count (length sublists)))
+		               (dolist (sublist sublists)
+		                 (push `(,(decf count)
+			                       ,@(expand-directive-list sublist))
+			                     clauses)))
+		             `(case ,case ,@clauses)))))
+     remaining)))
+
+(def-complex-format-directive #\; ()
+  (error 'format-error
+	       :complaint "~~; not contained within either ~~[...~~] or ~~<...~~>."))
 
 (def-complex-format-interpreter #\; ()
-  (error "~~; not contained within either ~~[...~~] or ~~<...~~>."))
+  (error 'format-error
+	       :complaint "~~; not contained within either ~~[...~~] or ~~<...~~>."))
 
 (def-complex-format-interpreter #\] ()
-  (error "No corresponding open bracket `]`."))
+  (error 'format-error
+	       :complaint "No corresponding open bracket."))
 
+(def-complex-format-directive #\] ()
+  (error 'format-error
+	       :complaint "No corresponding open bracket."))
+
+
+;;; Up-and-out
 
 (defvar *outside-args*)
 
+;;; tilda ^
 (def-format-interpreter #\^ (colonp atsignp params)
   (when atsignp
     (error "~~^ - Cannot specify the at-sign modifier."))
@@ -1372,8 +1493,45 @@
     (throw (if colonp 'up-up-and-out 'up-and-out)
 	    args)))
 
+(def-format-directive #\^ (colonp atsignp params)
+  (when atsignp
+    (error 'format-error :complaint "Cannot specify the at-sign modifier."))
+  (when (and colonp (not *up-up-and-out-allowed*))
+    (error 'format-error
+           :complaint "Attempt to use ~~:^ outside a ~~:{...~~} construct."))
+  ;; See the #\^ interpreter below for what happens here.
+  `(when ,(case (length params)
+	          (0 (if colonp
+		               '(null outside-args)
+		               (progn
+		                 (setf *only-simple-args* nil)
+		                 '(null args))))
+	          (1 (expand-bind-defaults ((count nil)) params
+		             `(if ,count
+		                  (eql ,count 0)
+		                  ,(if colonp
+			                     '(null outside-args)
+			                     (progn
+			                       (setf *only-simple-args* nil)
+			                       '(null args))))))
+	          (2 (expand-bind-defaults ((arg1 nil) (arg2 nil)) params
+		             `(if ,arg2
+		                  (eql ,arg1 ,arg2)
+		                  (eql ,arg1 0))))
+	          (t (expand-bind-defaults ((arg1 nil) (arg2 nil) (arg3 nil)) params
+		             `(if ,arg3
+		                  (<= ,arg1 ,arg2 ,arg3)
+		                  (if ,arg2
+			                    (eql ,arg1 ,arg2)
+                          ;; Duplicate the case of 1 arg?
+			                    (eql ,arg1 0))))))
+     ,(if colonp
+	        '(return-from outside-loop nil)
+	        '(return))))
 
-;;;
+;;; Iteration
+
+;;; tilda #\{
 (def-complex-format-interpreter #\{ (colonp atsignp params string end directives)
   (let ((close (find-directive directives #\} nil)))
     (unless close
@@ -1430,6 +1588,96 @@
 
 (def-complex-format-interpreter #\} ()
   (error  "No corresponding open brace `}`."))
+
+(def-complex-format-directive #\{ (colonp atsignp params string end directives)
+  (let ((close (find-directive directives #\} nil)))
+    (unless close
+      (error 'format-error
+	           :complaint "No corresponding close brace."))
+    (let* ((closed-with-colon (format-directive-colonp close))
+	         (posn (position close directives)))
+      (labels
+	        ((compute-insides ()
+	           (if (zerop posn)
+		             (if *orig-args-available*
+		                 `((handler-bind
+			                     ((format-error
+			                        #'(lambda (condition)
+				                          (error 'format-error
+					                               :complaint "~A~%while processing indirect format string:"
+					                               :arguments (list condition)
+					                               :print-banner nil
+					                               :control-string ,string
+					                               :offset ,(1- end)))))
+			                   (setf args
+			                         (%format stream inside-string orig-args args))))
+		                 (throw 'need-orig-args nil))
+		             (let ((*up-up-and-out-allowed* colonp))
+		               (expand-directive-list (subseq directives 0 posn)))))
+	         (compute-loop (count)
+	           (when atsignp
+	             (setf *only-simple-args* nil))
+	           `(loop
+		            ,@(unless closed-with-colon
+		                '((when (null args)
+			                  (return))))
+		            ,@(when count
+		                `((when (and ,count (minusp (decf ,count)))
+			                  (return))))
+		            ,@(if colonp
+		                  (let ((*expander-next-arg-macro* 'expander-next-arg)
+			                      (*only-simple-args* nil)
+			                      (*orig-args-available* t))
+			                  `((let* ((orig-args ,(expand-next-arg))
+				                         (outside-args args)
+				                         (args orig-args))
+			                      (declare (ignorable orig-args outside-args args))
+			                      (block nil
+			                        ,@(compute-insides)))))
+		                  (compute-insides))
+		            ,@(when closed-with-colon
+		                '((when (null args)
+			                  (return))))))
+	         (compute-block (count)
+	           (if colonp
+		             `(block outside-loop
+		                ,(compute-loop count))
+		             (compute-loop count)))
+	         (compute-bindings (count)
+	           (if atsignp
+		             (compute-block count)
+		             `(let* ((orig-args ,(expand-next-arg))
+			                   (args orig-args))
+		                (declare (ignorable orig-args args))
+		                ,(let ((*expander-next-arg-macro* 'expander-next-arg)
+			                     (*only-simple-args* nil)
+			                     (*orig-args-available* t))
+			                 (compute-block count))))))
+	      (values (if params
+		                (expand-bind-defaults ((count nil)) params
+		                  (if (zerop posn)
+			                    `(let ((inside-string ,(expand-next-arg)))
+			                       ,(compute-bindings count))
+			                    (compute-bindings count)))
+		                (if (zerop posn)
+			                  `(let ((inside-string ,(expand-next-arg)))
+			                     ,(compute-bindings nil))
+			                  (compute-bindings nil)))
+		            (nthcdr (1+ posn) directives))))))
+
+
+(def-complex-format-directive #\} ()
+  (error 'format-error
+	       :complaint "No corresponding open brace."))
+
+(def-complex-format-interpreter #\} ()
+  (error 'format-error
+	       :complaint "No corresponding open brace."))
+
+
+;;; Justification
+
+
 
 
 ;;; path for jscl::stream.lisp
