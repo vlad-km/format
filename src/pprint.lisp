@@ -295,12 +295,12 @@
     (once-only ((stream stream)
                 (entry `(,constructor :posn
                                       (index-posn
-				                               (pretty-stream-buffer-fill-pointer
-					                              ,stream)
-				                               ,stream)
-				                              ,@args))
-		            (op `(list ,entry))
-		            (head `(pretty-stream-queue-head ,stream)))
+                                       (pretty-stream-buffer-fill-pointer
+                                        ,stream)
+                                       ,stream)
+                                      ,@args))
+                (op `(list ,entry))
+                (head `(pretty-stream-queue-head ,stream)))
       `(progn
 	       (if ,head
 	           (setf (cdr ,head) ,op)
