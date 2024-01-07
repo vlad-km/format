@@ -1944,6 +1944,28 @@
 					                              arg))))))
   (if atsignp nil args))
 
+;;; note: pprint-logical-block
+(defun expand-format-logical-block (prefix per-line-p insides suffix atsignp)
+  `(let ((arg ,(if atsignp 'args (expand-next-arg))))
+     ,@(when atsignp
+	       (setf *only-simple-args* nil)
+	       '((setf args nil)))
+     (pprint-logical-block
+	       (stream arg
+		             ,(if per-line-p :per-line-prefix :prefix) (or ,prefix "")
+		             :suffix (or ,suffix ""))
+       (let ((args arg)
+	           ,@(unless atsignp
+		             `((orig-args arg))))
+         ;; todo: note: (declare ...)
+	       (declare (ignorable args ,@(unless atsignp '(orig-args))))
+	       (block nil
+	         ,@(let ((*expander-next-arg-macro* 'expander-pprint-next-arg)
+		               (*only-simple-args* nil)
+		               (*orig-args-available* t))
+	             (expand-directive-list insides)))))))
+
+
 (defun format-justification (stream newline-prefix extra-space line-len strings
 			                       pad-left pad-right mincol colinc minpad padchar)
   (setf strings (reverse strings))
