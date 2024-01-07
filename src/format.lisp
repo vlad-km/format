@@ -2194,35 +2194,34 @@
               package))))
 
 ;;; tilda #\/
-;;; bug: collect
-#+nil
 (def-format-interpreter #\/ (string start end colonp atsignp params)
   (let ((symbol (extract-user-function-name string start end)))
-    (collect ((args))
+    (jscl::with-collector (args)
       (dolist (param-and-offset params)
 	      (let ((param (cdr param-and-offset)))
 	        (case param
-	          (:arg (args (next-arg)))
-	          (:remaining (args (length args)))
+	          (:arg (collect-args (next-arg)))
+	          (:remaining (collect-args (length args)))
 	          (t (args param)))))
-      (apply (fdefinition symbol) stream (next-arg) colonp atsignp (args)))))
+      (apply (fdefinition symbol) stream (next-arg) colonp atsignp args))))
 
-#+nil
+
 (def-format-directive #\/ (string start end colonp atsignp params)
   (let ((symbol (extract-user-function-name string start end)))
-    (collect ((param-names) (bindings))
-      (dolist (param-and-offset params)
-	      (let ((param (cdr param-and-offset)))
-	        (let ((param-name (gensym)))
-	          (param-names param-name)
-	          (bindings `(,param-name
-			                  ,(case param
-			                     (:arg (expand-next-arg))
-			                     (:remaining '(length args))
-			                     (t param)))))))
-      `(let ,(bindings)
-	       (,symbol stream ,(expand-next-arg) ,colonp ,atsignp
-		              ,@(param-names))))))
+    (jscl::with-collector (param-names)
+      (jscl::with-collector (bindings)
+        (dolist (param-and-offset params)
+	        (let ((param (cdr param-and-offset)))
+	          (let ((param-name (gensym)))
+	            (collect-param-names param-name)
+	            (collect-bindings `(,param-name
+			                            ,(case param
+			                               (:arg (expand-next-arg))
+			                               (:remaining '(length args))
+			                               (t param)))))))
+        `(let ,bindings
+	         (,symbol stream ,(expand-next-arg) ,colonp ,atsignp
+		                ,@param-names))))))
 
 
 ;;; path for jscl::stream.lisp
