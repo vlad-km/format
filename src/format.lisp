@@ -1773,6 +1773,8 @@
 		                   (eql (format-directive-colonp x) (format-directive-colonp y))
 		                   (eql (format-directive-atsignp x) (format-directive-atsignp y))))))
 
+;;; bug: note: (collect (segments))
+#+nil
 (defun parse-format-justification (directives)
   (let ((first-semi nil)
 	      (close nil)
@@ -1792,9 +1794,30 @@
 	          (setf first-semi close-or-semi))))
       (values (segments) first-semi close remaining))))
 
+(defun parse-format-justification (directives)
+  (let ((first-semi nil)
+	      (close nil)
+	      (remaining directives))
+    (jscl::with-collector (segments)
+      (loop
+	      (let ((close-or-semi (find-directive remaining #\> t)))
+	        (unless close-or-semi
+	          (error 'format-error :complaint "No corresponding close bracket."))
+	        (let ((posn (position close-or-semi remaining)))
+	          (collect-segments (subseq remaining 0 posn))
+	          (setf remaining (nthcdr (1+ posn) remaining)))
+	        (when (char= (format-directive-character close-or-semi) #\>)
+	          (setf close close-or-semi)
+	          (return))
+	        (unless first-semi
+	          (setf first-semi close-or-semi))))
+      (values segments first-semi close remaining))))
+
+
 ;; CLHS 22.3.5.2 says fill-style conditional newlines are
 ;; automatically inserted after each group of blanks except for blanks
 ;; after a newline directive.
+#+nil
 (defun add-fill-style-newlines-aux (literal string offset &optional newlinep)
   (let ((end (length literal))
 	      (posn 0))
@@ -1817,6 +1840,31 @@
 	        (when (= posn end)
 	          (return))))
       (results))))
+
+(defun add-fill-style-newlines-aux (literal string offset &optional newlinep)
+  (let ((end (length literal))
+	      (posn 0))
+    (jscl::with-collector (results)
+      (loop
+	      (let ((blank (position #\space literal :start posn)))
+	        (when (null blank)
+	          (collect-results (subseq literal posn))
+	          (return))
+	        (let ((non-blank (or (position #\space literal :start blank
+					                                               :test #'char/=)
+			                         end)))
+	          (results (subseq literal posn non-blank))
+	          (unless newlinep
+	            (collect-results (make-format-directive
+			                          :string string :character #\_
+			                          :start (+ offset non-blank) :end (+ offset non-blank)
+			                          :colonp t :atsignp nil :params nil)))
+	          (setf posn non-blank))
+	        (when (= posn end)
+	          (return))))
+      results)))
+
+
 
 (defun add-fill-style-newlines (list string offset &optional newlinep)
   (if list
@@ -1911,7 +1959,8 @@
 		                 mincol))
 	       (padding (+ (- length chars) (* num-gaps minpad))))
     (when (and newline-prefix
-	             (> (+ (or (lisp::charpos stream) 0)
+               ;; note: todo: lisp::charpos
+	             (> (+ (or (charpos stream) 0)
 		                 length extra-space)
 		              line-len))
       (write-string newline-prefix stream))
@@ -1974,7 +2023,8 @@
 	           (when (and first-semi (format-directive-colonp first-semi))
 		           (interpret-bind-defaults
 		            ((extra 0)
-		             (len (or (lisp::line-length stream) 72)))
+                 ;; note: todo: lisp::line-length
+		             (len (or (line-length stream) 72)))
 		            (format-directive-params first-semi)
 		            (setf newline-string
 			                (with-output-to-string (stream)
@@ -2015,7 +2065,8 @@
 			                   ,@(expand-directive-list (pop segments))))
 		             ,(expand-bind-defaults
 		                  ((extra 0)
-		                   (line-len '(or (lisp::line-length stream) 72)))
+                       ;; note: todo: lisp::line-length
+		                   (line-len '(or (line-length stream) 72)))
 		                  (format-directive-params first-semi)
 		                `(setf extra-space ,extra line-len ,line-len))))
 	         ,@(mapcar #'(lambda (segment)
