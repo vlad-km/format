@@ -14,7 +14,7 @@ ___
 
 ### format - first release
 ### format directives included in the release:
--  `~A`  `~S` `~C`
+-  _`~A`_  _`~S`_ _`~C`_
 -   `~W`
 -   `~D`  `~B`  `~O`  `~X`  `~R`
 -  `~P` `~F`
