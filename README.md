@@ -1,20 +1,34 @@
 #  Common Lisp function FORMAT
 
-
 Rewrited FORMAT function from repo  https://github.com/public-domain/cmucl
 
 Not included in the standard JSCL distribution
 
 Only for Windows/Electron platform. How to use JSCL on the electron, see https://github.com/vlad-km/how-to/blob/main/jscl-electron.txt
 
+___
+
 # Status
 
-Development
+### Pretty Print - Development
 
+### format - first release
+### format directives included in the release:
+-  `~A`  `~S` `~C`
+-   `~W`
+-   `~D`  `~B`  `~O`  `~X`  `~R`
+-  `~P` `~F`
+-  `~%` `~&` `~~`  `~#\newline`
+-  `~*` `~?`
+-  `~{` `~;` `~^` `~{`
+-  `~/`
+___
  
 # Compilation
 
 ## development
+
+___
 
 ```lisp
   (load "./repo/format/src/streams.lisp")
@@ -25,6 +39,8 @@ Development
   (load "./repo/format/src/format-test.lisp")
   (close *out)
 ```
+___
+
 ## production
 
 ```lisp
@@ -32,9 +48,13 @@ Development
 (jscl::fset 'format (fdefinition '%das!format))
 ```
 
+___
+
 # License
 
 Public domain
+
+___
 
 
 ### @vlad-km
