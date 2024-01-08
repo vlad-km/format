@@ -22,6 +22,9 @@ ___
 -  `~*` `~?`
 -  `~{` `~;` `~^` `~{`
 -  `~/`
+
+#### See some implementation limitations in the report:
+- file `./rep.txt'
 ___
  
 # Compilation
