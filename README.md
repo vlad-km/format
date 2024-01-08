@@ -13,6 +13,8 @@ ___
 ### Pretty Print - Development
 
 ### FORMAT - first release, version 1.0
+function `FORMATTER` also included
+
 #### FORMAT directives, included in the release:
 -  _`~A`_  _`~S`_ _`~C`_
 -   `~W`
