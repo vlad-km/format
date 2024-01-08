@@ -13,7 +13,8 @@ ___
 ### Pretty Print - Development
 
 ### FORMAT - first release, version 1.0
-function `FORMATTER` also included
+-  `FORMATTER function`* is also included in the release
+
 
 #### FORMAT directives, included in the release:
 -  _`~A`_  _`~S`_ _`~C`_
@@ -52,6 +53,8 @@ ___
    ;;`JSCL FORMAT' now is available for use as `JSCL::!FORMAT'
    ;; (format t "~5&Hello~5%")      - ANSII FORMAT
    ;; (jscl::!format t "~&Hello~&") - JSCL FORMAT
+   (setq *f1 (formatter "~5&Hello ~a~%"))
+   (format t *f1 :|any name|)
 ```
 
 ___
