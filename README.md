@@ -28,24 +28,25 @@ ___
 
 ## development
 
-___
 
 ```lisp
-  (load "./repo/format/src/streams.lisp")
-  (setq *out (open "./repo/format/rep.txt" 'write))
   (load "./repo/format/src/format.lisp")
-  (setq *sot *standard-output*)
-  (setq  *standard-output* *out)
-  (load "./repo/format/src/format-test.lisp")
-  (close *out)
+  ;; or
+  (require "./format.js")
+  (load "./repo/format/src/pp/format-pp.lisp")
+  (load "./repo/format/src/pp/pp.lisp")
 ```
 ___
 
 ## production
 
 ```lisp
-(require "./format.js")
-(jscl::fset 'format (fdefinition '%das!format))
+   (require "./format.js")
+   (jscl::fset 'format (fdefinition '%das!format))
+   ;; after the command, `DAS!FORMAT' function is called as `FORMAT'
+   ;;`JSCL FORMAT' now is available for use as `JSCL::!FORMAT'
+   ;; (format t "~5&Hello~5%")      - ANSII FORMAT
+   ;; (jscl::!format t "~&Hello~&") - JSCL FORMAT
 ```
 
 ___
