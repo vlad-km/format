@@ -31,6 +31,11 @@
 ;;;
 
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (find-package :fmt-ansii)
+    (error "Load  `FORMAT' firstly")))
+
+
 ;;;; Tab and simple pretty-printing noise.
 
 (defmacro expander-pprint-next-arg (string offset)
