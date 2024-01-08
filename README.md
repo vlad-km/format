@@ -16,11 +16,11 @@ ___
 #### FORMAT directives, included in the release:
 -  _`~A`_  _`~S`_ _`~C`_
 -   `~W`
--   `~D`  `~B`  `~O`  `~X`  `~R`
--  `~P` `~F`
+-   `~D`  `~B`  `~O`  `~X`  `~R` `~F`
+-  `~P`
 -  `~%` `~&` `~~`  `~#\newline`
 -  `~*` `~?`
--  `~{` `~;` `~^` `~{`
+-  `~{` `~;` `~^` `~[`
 -  `~/`
 
 #### See some implementation limitations in the report:
