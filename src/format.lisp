@@ -5,7 +5,7 @@
             /\___/\
             )     (
            =\     /=                  if this code is not work, i dont know who wrote this code
-             )   (                                                               2023,  @vlad-km
+             )   (                                                               2024,  @vlad-km
             /     \                   
             )     (                   
            /       \                  Electron >= electron@21.2.2
