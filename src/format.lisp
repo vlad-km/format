@@ -31,7 +31,7 @@
 ;;; version by David Adam and later rewritten by Bill Maddox.
 ;;;
 
-(declaim (clos override))
+#+moren (declaim (clos override))
 
 (defconstant +format-directive-limit+ (1+ (char-code #\~)))
 (defvar *format-directive-expanders* (make-array +format-directive-limit+ :initial-element nil))
