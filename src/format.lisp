@@ -657,7 +657,7 @@
 (defvar *print-level*  nil)
 (defvar *print-length* nil)
 
-;;; tilda W
+;;; tilde W
 (def-format-interpreter #\W (colonp atsignp params)
   (interpret-bind-defaults
    ()
@@ -678,7 +678,7 @@
 	         (output-object ,(expand-next-arg) stream))
 	      `(output-object ,(expand-next-arg) stream))))
 
-;;; tilda D
+;;; tilde D
 (def-format-interpreter #\D (colonp atsignp params)
   (interpret-format-integer 10))
 
@@ -686,28 +686,28 @@
   (expand-format-integer 10 colonp atsignp params))
 
 
-;;; tilda B
+;;; tilde B
 (def-format-interpreter #\B (colonp atsignp params)
   (interpret-format-integer 2))
 
 (def-format-directive #\B (colonp atsignp params)
   (expand-format-integer 2 colonp atsignp params))
 
-;;; tilda O
+;;; tilde O
 (def-format-interpreter #\O (colonp atsignp params)
   (interpret-format-integer 8))
 
 (def-format-directive #\O (colonp atsignp params)
   (expand-format-integer 8 colonp atsignp params))
 
-;;; tilda X
+;;; tilde X
 (def-format-interpreter #\X (colonp atsignp params)
   (interpret-format-integer 16))
 
 (def-format-directive #\X (colonp atsignp params)
   (expand-format-integer 16 colonp atsignp params))
 
-;;; tilda R
+;;; tilde R
 (def-format-interpreter #\R (colonp atsignp params)
   (if params
       (interpret-bind-defaults
@@ -748,7 +748,7 @@
 	            `(format-print-cardinal stream ,(expand-next-arg))))))
 
 
-;;; tilda P
+;;; tilde P
 ;;; bug: ? see rep.txt
 (def-format-interpreter #\P (colonp atsignp params)
   (interpret-bind-defaults
@@ -984,7 +984,7 @@
   (write-string (make-string how-many :initial-element char) stream)
   (values))
 
-;;; tilda F
+;;; tilde F
 (def-format-interpreter #\F (colonp atsignp params)
   (when colonp
     (error "~~F - Cannot specify the colon modifier with this directive."))
@@ -999,7 +999,7 @@
   (expand-bind-defaults ((w nil) (d nil) (k nil) (ovf nil) (pad #\space)) params
     `(format-fixed stream ,(expand-next-arg) ,w ,d ,k ,ovf ,pad ,atsignp)))
 
-;;; tilda %
+;;; tilde %
 (def-format-interpreter #\% (colonp atsignp params)
   (when (or colonp atsignp)
     (error 'format-error
@@ -1019,7 +1019,7 @@
       '(terpri stream)))
 
 
-;;; tilda &
+;;; tilde &
 (def-format-interpreter #\& (colonp atsignp params)
   (when (or colonp atsignp)
     (error 'format-error
@@ -1043,7 +1043,7 @@
 	             (terpri stream)))))
       '(fresh-line stream)))
 
-;;; tilda ~
+;;; tilde ~
 ;;; todo: (dotimes (write-char)) -> (write-string (make-string))
 (def-format-interpreter #\~ (colonp atsignp params)
   (when (or colonp atsignp)
@@ -1064,7 +1064,7 @@
       '(write-char #\~ stream)))
 
 
-;;; tilda newline
+;;; tilde newline
 ;;; todo: ????
 (def-complex-format-interpreter #\newline (colonp atsignp params directives)
   (when (and colonp atsignp)
@@ -1180,7 +1180,7 @@
 		                                  (stream-advance-to-column stream
 						                                                    (+ colnum (* k colinc))))))))))))
 
-;;; tilda T
+;;; tilde T
 
 (def-format-interpreter #\T
     (colonp atsignp params)
@@ -1204,7 +1204,7 @@
 	        (expand-bind-defaults ((colnum 1) (colinc 1)) params
 	          `(format-absolute-tab stream ,colnum ,colinc)))))
 
-;;; tilda _
+;;; tilde _
 (def-format-interpreter #\_ (colonp atsignp params)
   (interpret-bind-defaults () params
     (pprint-newline (if colonp
@@ -1227,7 +1227,7 @@
 			      :linear))
 		     stream)))
 
-;;; tilda #\I
+;;; tilde #\I
 (def-format-interpreter #\I (colonp atsignp params)
   (when atsignp
     (error 'format-error
@@ -1242,7 +1242,7 @@
   (expand-bind-defaults ((n 0)) params
     `(pprint-indent ,(if colonp :current :block) ,n stream)))
 
-;;; tilda #\*
+;;; tilde #\*
 (def-format-interpreter #\* (colonp atsignp params)
   (if atsignp
       (if colonp
@@ -1309,7 +1309,7 @@
 		               ,(expand-next-arg)))
 	            (expand-next-arg)))))
 
-;;; tilda #\?
+;;; tilde #\?
 ;;; todo: bind->case ???
 ;;; bug:
 (def-format-interpreter #\? (colonp atsignp params string end)
@@ -1440,7 +1440,7 @@
 	        (hairy)))))
 
 
-;;; tilda #\[
+;;; tilde #\[
 (def-complex-format-interpreter #\[ (colonp atsignp params directives)
   (multiple-value-bind (sublists last-semi-with-colon-p remaining)
       (parse-conditional-directive directives)
@@ -1539,7 +1539,7 @@
 
 (defvar *outside-args*)
 
-;;; tilda ^
+;;; tilde ^
 (def-format-interpreter #\^ (colonp atsignp params)
   (when atsignp
     (error "~~^ - Cannot specify the at-sign modifier."))
@@ -1610,7 +1610,7 @@
 
 ;;; Iteration
 
-;;; tilda #\{
+;;; tilde #\{
 (def-complex-format-interpreter #\{ (colonp atsignp params string end directives)
   (let ((close (find-directive directives #\} nil)))
     (unless close
@@ -2103,7 +2103,7 @@
 			                         segments ,colonp ,atsignp
 			                         ,mincol ,colinc ,minpad ,padchar)))))
 
-;;; tilda #\<
+;;; tilde #\<
 (def-complex-format-interpreter #\<
 		(colonp atsignp params string end directives)
   (multiple-value-bind
@@ -2193,7 +2193,7 @@
                 (t name))
               package))))
 
-;;; tilda #\/
+;;; tilde #\/
 (def-format-interpreter #\/ (string start end colonp atsignp params)
   (let ((symbol (extract-user-function-name string start end)))
     (jscl::with-collector (args)
