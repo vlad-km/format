@@ -1,10 +1,10 @@
 #  Common Lisp function FORMAT
 
-Rewrited FORMAT function from repo  https://github.com/public-domain/cmucl
+Rewrited FORMAT function from repo https://github.com/public-domain/cmucl
 
-Not included in the standard JSCL distribution
+Not included in the standard `JSCL` distribution
 
-Only for Windows/Electron platform. How to use JSCL on the electron, see https://github.com/vlad-km/how-to/blob/main/jscl-electron.txt
+Only for Windows/Electron platform. How to use `JSCL` on the `Electron`, see https://github.com/vlad-km/how-to/blob/main/jscl-electron.txt
 
 ___
 
@@ -12,8 +12,8 @@ ___
 
 ### Pretty Print - Development
 
-### format - first release
-### format directives included in the release:
+### FORMAT - first release, version 1.0
+#### FORMAT directives, included in the release:
 -  _`~A`_  _`~S`_ _`~C`_
 -   `~W`
 -   `~D`  `~B`  `~O`  `~X`  `~R`
