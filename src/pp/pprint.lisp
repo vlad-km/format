@@ -51,8 +51,9 @@
 (deftype posn ()
   'fixnum)
 
-(defconstant initial-buffer-size 128)
-(defconstant default-line-length 80)
+;;; todo: note: rename +initial-buffer-size+ &...
+(defconstant +initial-buffer-size+ 128)
+(defconstant +default-line-length+ 80)
 
 (defstruct (pretty-stream (:include lisp-stream
                            (:out #'pretty-out) (:sout #'pretty-sout) (:misc #'pretty-misc))
@@ -66,9 +67,7 @@
   ;; Line length we should format to.  Cached here so we don't have to keep
   ;; extracting it from the target stream.
   ;; todo: note: *print-right-margin* 
-  (line-length (or *print-right-margin* lisp::line-length
-                   (lisp::line-length target)
-                   default-line-length)
+  (line-length (or *print-right-margin*  +default-line-length+)
    :type column)
   ;;
   ;; A simple string holding all the text that has been output but not yet
@@ -116,11 +115,15 @@
   (queue-head nil :type list)
   ;;
   ;; Block-start queue entries in effect at the queue head.
-  (pending-blocks nil :type list)
+  (pending-blocks nil :type list))
+
+#|
   ;; 
   ;; Queue of annotations to the buffer
   (annotations-tail nil :type list)
   (annotations-head nil :type list))
+
+|#
 
 (defun index-posn (index stream)
   (+ index (pretty-stream-buffer-offset stream)))
@@ -470,61 +473,34 @@
 
 ;;;; Annotations support.
 
+;;; todo: note: this function drope
 (defstruct (annotation (:include queued-op))
   (handler (constantly nil) :type function)
   (record))
 
- #|
-  "Insert an annotation into the pretty-printing stream STREAM. 
-  HANDLER is a function, and RECORD is an arbitrary datum.  The
-  pretty-printing stream conceptionally queues annotations in sequence 
-  with the characters that are printed to the stream, until the stream 
-  has decided on the concrete layout.  When the characters are forwarded 
-  to the target stream, annotations are invoked at the right position. 
-  An annotation is invoked by calling the function HANDLER with the 
-  three arguments RECORD, TARGET-STREAM, and TRUNCATEP.  The argument
-  TRUNCATEP is true if the text surrounding the annotation is suppressed
-  due to line abbreviation (see *PRINT-LINES*). 
-  If STREAM is not a pretty-printing stream, simply call HANDLER
-  with the arguments RECORD, STREAM and nil." 
- |#
-
+;;; todo: note: this function drope
 (defun enqueue-annotation (stream handler record)
-  (enqueue stream annotation :handler handler
+  #+nil(enqueue stream annotation :handler handler
                              :record record))
 
-#|  "Insert ANNOTATION into the queue of annotations in STREAM." |#
+;;; todo: note: this function drope
 (defun re-enqueue-annotation (stream annotation)
-  (let* ((annotation-cons (list annotation))
+  #+nil(let* ((annotation-cons (list annotation))
          (head (pretty-stream-annotations-head stream)))
     (if head
         (setf (cdr head) annotation-cons)
         (setf (pretty-stream-annotations-tail stream) annotation-cons))
     (setf (pretty-stream-annotations-head stream) annotation-cons)))
 
-#|
-  "Insert all annotations in STREAM from the queue of pending
-  operations into the queue of annotations.  When END is non-nil,
-  stop before reaching the queued-op END."
-|#
+;;; todo: note: this function drope
 (defun re-enqueue-annotations (stream end)
-  #-(and)
-  (loop for tail = (pretty-stream-queue-tail stream) then (cdr tail)
-        while (and tail (not (eql (car tail) end)))
-        when (annotation-p (car tail)) 
-          do (re-enqueue-annotation stream (car tail)))
-  #+(and)
+  #+nil
   (do ((tail (pretty-stream-queue-tail stream) (cdr tail)))
       ((not (and tail (not (eql (car tail) end)))))
     (when (annotation-p (car tail))
       (re-enqueue-annotation stream (car tail)))))
 
-#|
-"Dequeue the next annotation from the queue of annotations of STREAM
-  and return it.  Return nil if there are no more annotations.  When 
-  :END-POSN is given and the next annotation has a posn greater than 
-  this, also return nil."
-|#
+;;; todo: note: this function drope
 (defun dequeue-annotation (stream &key end-posn)
   (let ((next-annotation (car (pretty-stream-annotations-tail stream))))
     (when next-annotation
@@ -535,6 +511,7 @@
           (setf (pretty-stream-annotations-head stream) nil))
         next-annotation))))
 
+;;; todo: note: this function drope
 (defun invoke-annotation (stream annotation truncatep)
   (let ((target (pretty-stream-target stream)))
     (funcall (annotation-handler annotation)
@@ -542,27 +519,15 @@
              target
              truncatep)))
 
-#|
-"Output the buffer of STREAM up to (excluding) the buffer index END.
-  When annotations are present, invoke them at the right positions."
-|#
+;;; todo: note: instead of calling this function use
+;;;             (write-string buffer target :start start :end end)
+;;;             this function drope
 (defun output-buffer-with-annotations (stream end)
   (let ((target (pretty-stream-target stream))
         (buffer (pretty-stream-buffer stream))
         (end-posn (index-posn end stream))
         (start 0))
-    #-(and)
-    (loop
-      for annotation = (dequeue-annotation stream :end-posn end-posn)
-      while annotation
-      do
-         (let ((annotation-index (posn-index (annotation-posn annotation)
-                                             stream)))
-           (write-string buffer target :start start 
-                                       :end annotation-index)
-           (invoke-annotation stream annotation nil)
-           (setf start annotation-index)))
-    #+(and)
+    #+nil
     (do ((annotation (dequeue-annotation stream :end-posn end-posn)
                      (dequeue-annotation stream :end-posn end-posn)))
         ((not annotation))
@@ -574,15 +539,11 @@
         (setf start annotation-index)))
     (write-string buffer target :start start :end end)))
 
- #|  "Invoke all annotations in STREAM up to (including) the buffer index END." |#
+
+;;; todo: note: this function drope
 (defun flush-annotations (stream end truncatep)
   (let ((end-posn (index-posn end stream)))
-    #-(and)
-    (loop
-      for annotation = (dequeue-annotation stream :end-posn end-posn)
-      while annotation
-      do (invoke-annotation stream annotation truncatep))
-    #+(and)
+    #+nil
     (do ((annotation (dequeue-annotation stream :end-posn end-posn)
                      (dequeue-annotation stream :end-posn end-posn)))
         ((not annotation))
