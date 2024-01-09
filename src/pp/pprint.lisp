@@ -72,7 +72,7 @@
   ;;
   ;; A simple string holding all the text that has been output but not yet
   ;; printed.
-  (buffer (make-string initial-buffer-size) :type simple-string)
+  (buffer (make-string +initial-buffer-size+) :type string)
   ;;
   ;; The index into BUFFER where more text should be put.
   (buffer-fill-pointer 0 :type index)
@@ -98,13 +98,13 @@
   ;; Buffer holding the per-line prefix active at the buffer start.
   ;; Indentation is included in this.  The length of this is stored
   ;; in the logical block stack.
-  (prefix (make-string initial-buffer-size) :type simple-string)
+  (prefix (make-string +initial-buffer-size+) :type string)
   ;;
   ;; Buffer holding the total remaining suffix active at the buffer start.
   ;; The characters are right-justified in the buffer to make it easier
   ;; to output the buffer.  The length is stored in the logical block
   ;; stack.
-  (suffix (make-string initial-buffer-size) :type simple-string)
+  (suffix (make-string +initial-buffer-size+) :type string)
   ;;
   ;; Queue of pending operations.  When empty, HEAD=TAIL=NIL.  Otherwise,
   ;; TAIL holds the first (oldest) cons and HEAD holds the last (newest)
@@ -137,14 +137,12 @@
 ;;;; Stream interface routines.
 
 (defun pretty-out (stream char)
-  (cond ((char= char #\newline)
-         (enqueue-newline stream :literal))
-        (t
-         (assure-space-in-buffer stream 1)
-         (let ((fill-pointer (pretty-stream-buffer-fill-pointer stream)))
-           (setf (schar (pretty-stream-buffer stream) fill-pointer) char)
-           (setf (pretty-stream-buffer-fill-pointer stream)
-                 (1+ fill-pointer))))))
+  (cond ((char= char #\newline) (enqueue-newline stream :literal))
+        (t  (assure-space-in-buffer stream 1)
+            (let ((fill-pointer (pretty-stream-buffer-fill-pointer stream)))
+              (setf (schar (pretty-stream-buffer stream) fill-pointer) char)
+              (setf (pretty-stream-buffer-fill-pointer stream)
+                    (1+ fill-pointer))))))
 
 (defun pretty-sout (stream string start end)
   (let ((end (or end (length string))))
