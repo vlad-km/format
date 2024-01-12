@@ -1693,7 +1693,7 @@
            ,(expand-control-string control-string)
            args)))))
 
-(unless (find :fmt-ansii *features)
+(unless (find :fmt-ansii *features*)
   (push :fmt-ansii *features*))
 
 ;;; Damn, this code, ancient, as a mammoth shit
