@@ -31,7 +31,15 @@
 ;;; version by David Adam and later rewritten by Bill Maddox.
 ;;;
 
-#+moren (declaim (clos override))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (find-package "FMT-ANSII")
+    (defpackage :fmt-ansii
+      (:use :cl))))
+
+(in-package :fmt-ansii) 
+
+
+(declaim (clos override))
 
 (defconstant +format-directive-limit+ (1+ (char-code #\~)))
 (defvar *format-directive-expanders* (make-array +format-directive-limit+ :initial-element nil))
@@ -74,9 +82,10 @@
 ;;; Used by the expander stuff.  List of (symbol . offset) for simple args.
 (defvar *simple-args*)
 
-(defvar *print-pretty* nil)
-(defvar *print-level*  nil)
-(defvar *print-length* nil)
+;;; this is not right but for now
+(setf *print-pretty* nil)
+(setf *print-level*  nil)
+(setf *print-length* nil)
 
 ;;; stub for SVREF
 (jscl::fset 'svref (fdefinition 'aref))
@@ -1695,6 +1704,10 @@
 
 (unless (find :fmt-ansii *features*)
   (push :fmt-ansii *features*))
+
+(jscl::fset 'format (fdefinition 'das!format))
+
+(in-package :cl-user)
 
 ;;; Damn, this code, ancient, as a mammoth shit
 ;;; EOF
